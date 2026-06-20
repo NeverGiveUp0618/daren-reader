@@ -555,6 +555,74 @@ body {
 }
 #toast.show { opacity: 1; }
 
+/* ===== TEXT LAYER ===== */
+.textLayer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  line-height: 1;
+  user-select: text;
+  -webkit-user-select: text;
+  pointer-events: auto;
+}
+.textLayer span,
+.textLayer br {
+  color: transparent;
+  position: absolute;
+  white-space: pre;
+  cursor: text;
+  transform-origin: 0% 0%;
+}
+.textLayer ::selection      { background: rgba(255, 210, 60, 0.38); color: transparent; }
+.textLayer ::-moz-selection { background: rgba(255, 210, 60, 0.38); color: transparent; }
+
+/* ===== SELECTION NOTE BUTTON ===== */
+#sel-btn {
+  display: none;
+  position: fixed;
+  z-index: 600;
+}
+#sel-note-btn {
+  background: #1e3020;
+  border: 1px solid #5a8a5a;
+  color: #9ac89a;
+  border-radius: 16px;
+  padding: 5px 14px;
+  font-size: 0.82rem;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.7);
+  white-space: nowrap;
+  font-family: inherit;
+  transition: background 0.12s;
+}
+#sel-note-btn:hover { background: #263826; }
+
+/* ===== NOTE QUOTE PREVIEW ===== */
+#note-ctx {
+  display: none;
+  background: #1a1a1a;
+  border-left: 3px solid #C8A96E;
+  border-radius: 0 4px 4px 0;
+  padding: 5px 8px;
+  margin-bottom: 8px;
+  font-size: 0.76rem;
+  color: #C8A96E;
+  line-height: 1.5;
+  max-height: 60px;
+  overflow-y: auto;
+  word-break: break-all;
+}
+.note-quote {
+  font-size: 0.75rem;
+  color: #C8A96E;
+  border-left: 2px solid #8B7040;
+  padding: 3px 7px;
+  margin-bottom: 4px;
+  font-style: italic;
+  word-break: break-all;
+  line-height: 1.45;
+}
+
 /* ===== MOBILE ===== */
 @media (max-width: 640px) {
   /* Bookshelf */
@@ -684,6 +752,7 @@ body {
 
 <!-- ======================== NOTE POPUP ======================== -->
 <div id="note-popup">
+  <div id="note-ctx"></div>
   <textarea id="note-ta" placeholder="输入笔记内容..."></textarea>
   <div class="color-row">
     <div class="cdot sel" data-color="#FFD700" style="background:#FFD700" title="金"></div>
@@ -697,6 +766,8 @@ body {
     <button id="btn-cancel-note">取消</button>
   </div>
 </div>
+
+<div id="sel-btn"><button id="sel-note-btn">📝 写笔记</button></div>
 
 <div id="toast"></div>
 
@@ -778,9 +849,10 @@ let S = {
   scrollMode: false,
   noteMode: false,
   panelOpen: false,
-  pending: null,     // {x,y} pct coords for new note
-  editId: null,      // id of note being edited
+  pending: null,
+  editId: null,
   color: '#FFD700',
+  currentQuote: null,
 };
 
 // ============================================================
@@ -802,10 +874,11 @@ function getProgress(id) {
 function saveProgress(id, pg) {
   localStorage.setItem(pKey(id), pg);
 }
-function addNote(id, pg, x, y, text, color) {
+function addNote(id, pg, x, y, text, color, quote) {
   const d = getNotes(id);
   if (!d[pg]) d[pg] = [];
   const note = { id: Date.now(), x, y, text, color,
+                 quote: quote || null,
                  at: new Date().toLocaleString('zh-CN') };
   d[pg].push(note);
   saveNotes(id, d);
@@ -970,6 +1043,20 @@ async function renderPage(pg, dir) {
 
   await page.render({ canvasContext: ctx, viewport }).promise;
 
+  // Text layer — enables text selection; silently skips image-only PDFs
+  const existingTL = wrap.querySelector('.textLayer');
+  if (existingTL) existingTL.remove();
+  try {
+    const textContent = await page.getTextContent();
+    const tld = document.createElement('div');
+    tld.className = 'textLayer';
+    wrap.insertBefore(tld, document.getElementById('annot-overlay'));
+    const task = pdfjsLib.renderTextLayer({
+      textContent, container: tld, viewport, textDivs: [],
+    });
+    if (task && task.promise) await task.promise;
+  } catch(e) {}
+
   document.getElementById('page-in').value = pg;
   document.getElementById('progress-pct').textContent =
     Math.round(pg / S.total * 100) + '%';
@@ -1019,6 +1106,7 @@ function renderPins() {
   const notes = getNotes(S.book.id);
   const pg = notes[S.page] || [];
   pg.forEach((n, i) => {
+    if (n.x == null) return; // text-selection note: no pin
     const pin = document.createElement('div');
     pin.className = 'pin';
     pin.style.cssText =
@@ -1061,8 +1149,10 @@ function placePopup(px, py) {
 
 function closePopup() {
   document.getElementById('note-popup').style.display = 'none';
+  document.getElementById('note-ctx').style.display = 'none';
   S.pending = null;
   S.editId  = null;
+  S.currentQuote = null;
 }
 
 function setColor(c) {
@@ -1082,7 +1172,9 @@ document.getElementById('btn-save-note').addEventListener('click', () => {
     });
     saveNotes(S.book.id, d);
   } else {
-    addNote(S.book.id, S.page, S.pending.x, S.pending.y, text, S.color);
+    const px = S.pending ? S.pending.x : null;
+    const py = S.pending ? S.pending.y : null;
+    addNote(S.book.id, S.page, px, py, text, S.color, S.currentQuote);
   }
   closePopup();
   renderPins();
@@ -1094,6 +1186,60 @@ document.getElementById('btn-cancel-note').addEventListener('click', closePopup)
 
 document.querySelectorAll('.cdot').forEach(d =>
   d.addEventListener('click', () => setColor(d.dataset.color)));
+
+// ============================================================
+//  TEXT SELECTION → NOTE
+// ============================================================
+let _selText = '', _selRect = null;
+
+function checkSel() {
+  if (document.getElementById('view-reader').style.display === 'none') return;
+  if (S.noteMode || S.scrollMode) return;
+  const sel = window.getSelection();
+  const txt = sel ? sel.toString().trim() : '';
+  if (txt.length > 1 && sel.rangeCount > 0) {
+    _selText = txt;
+    const rect = sel.getRangeAt(0).getBoundingClientRect();
+    _selRect = rect;
+    const btn = document.getElementById('sel-btn');
+    btn.style.left = Math.max(8, Math.min(rect.left, window.innerWidth - 130)) + 'px';
+    btn.style.top  = Math.min(rect.bottom + 8, window.innerHeight - 52) + 'px';
+    btn.style.display = 'block';
+  } else {
+    hideSelBtn();
+  }
+}
+
+function hideSelBtn() {
+  document.getElementById('sel-btn').style.display = 'none';
+  _selText = '';
+  _selRect = null;
+}
+
+document.addEventListener('mouseup',  () => setTimeout(checkSel, 30));
+document.addEventListener('touchend', () => setTimeout(checkSel, 80));
+
+document.getElementById('sel-note-btn').addEventListener('click', () => {
+  if (!_selText || !S.book) { hideSelBtn(); return; }
+  S.currentQuote = _selText;
+  S.pending = { x: null, y: null };
+  S.editId  = null;
+
+  const ctx = document.getElementById('note-ctx');
+  ctx.textContent = '「' + _selText + '」';
+  ctx.style.display = 'block';
+  document.getElementById('note-ta').value = '';
+
+  const px = _selRect ? _selRect.left : window.innerWidth / 2 - 130;
+  const py = _selRect ? _selRect.bottom + 10 : window.innerHeight / 2;
+  placePopup(px, py);
+  document.getElementById('note-ta').focus();
+  hideSelBtn();
+  window.getSelection().removeAllRanges();
+});
+
+// Hide sel-btn on scroll or ESC
+document.getElementById('reader-main').addEventListener('scroll', hideSelBtn, { passive: true });
 
 // Overlay click to place pin
 document.getElementById('annot-overlay').addEventListener('click', e => {
@@ -1142,7 +1288,8 @@ function refreshPanel() {
     el.className = 'note-item';
     el.style.borderLeftColor = n.color || '#FFD700';
     el.innerHTML = `
-      <div class="note-pg">第 ${n.pg} 页</div>
+      <div class="note-pg">第 ${n.pg} 页${n.x != null ? ' 📌' : ' 📝'}</div>
+      ${n.quote ? `<div class="note-quote">「${esc(n.quote)}」</div>` : ''}
       <div class="note-text">${esc(n.text)}</div>
       <div class="note-time">${n.at}</div>
       <div class="note-del" data-id="${n.id}" data-pg="${n.pg}">✕</div>`;
@@ -1291,7 +1438,7 @@ document.addEventListener('keydown', e => {
   if (document.getElementById('view-reader').style.display === 'none') return;
   if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')    { e.preventDefault(); if (S.page>1)      renderPage(S.page-1,'prev'); }
   if (e.key === 'ArrowRight' || e.key === 'ArrowDown')  { e.preventDefault(); if (S.page<S.total) renderPage(S.page+1,'next'); }
-  if (e.key === 'Escape')   closePopup();
+  if (e.key === 'Escape')   { closePopup(); hideSelBtn(); }
   if (e.key === '+' || e.key === '=') zoom(+0.1);
   if (e.key === '-')                  zoom(-0.1);
 });

@@ -141,7 +141,7 @@ body {
 /* ============================================================
    TEXT VIEW
    ============================================================ */
-#text-view { display: none; flex: 1; overflow-y: auto; background: var(--paper); color: #1a0e02; padding: 20px 18px 40px; font-size: 1.06rem; line-height: 2; word-break: break-all; font-family: 'Noto Serif SC','SimSun','STSong',serif; }
+#text-view { display: none; flex: 1; overflow-y: auto; background: var(--paper); color: #1a0e02; padding: 20px 18px 40px; font-size: 1.06rem; line-height: 2; word-break: break-word; font-family: 'SimSun','STSong','Noto Serif SC',serif; white-space: pre-wrap; }
 [data-theme="light"] #text-view { color: #1a1a2e; }
 .tv-page { margin-bottom: 12px; }
 .tv-pg-label { color: var(--t2); font-size: .7rem; text-align: center; border-top: 1px dashed var(--bd); margin: 18px 0 14px; padding-top: 6px; letter-spacing: .2em; }
@@ -531,11 +531,7 @@ async function openBook(book) {
     }
     document.getElementById('zoom-pct').textContent = Math.round(S.scale*100) + '%';
 
-    if (S.scrollMode) {
-      await renderScroll();
-    } else {
-      await renderPage(S.page);
-    }
+    await enterTextMode();
     refreshPanel();
   } catch(e) {
     showLoad(false);
@@ -785,13 +781,40 @@ function extractPageText(tc) {
     const y = item.transform[5];
     let line = lines.find(l => Math.abs(l.y - y) <= LINE_GAP);
     if (!line) { line = { y, parts: [] }; lines.push(line); }
-    line.parts.push({ x: item.transform[4], str: item.str });
+    line.parts.push({ x: item.transform[4], str: item.str, w: item.width || 0 });
   });
   lines.sort((a, b) => b.y - a.y);
+
+  // 估算中位字符宽度（PDF 用户单位）
+  const allCW = [];
+  lines.forEach(l => l.parts.forEach(p => {
+    if (p.w > 0 && p.str.length > 0) allCW.push(p.w / p.str.length);
+  }));
+  allCW.sort((a, b) => a - b);
+  const unitW = allCW.length ? allCW[Math.floor(allCW.length / 2)] : 10;
+
+  // 全局左边距
+  let minX = Infinity;
+  lines.forEach(l => l.parts.forEach(p => { if (p.x < minX) minX = p.x; }));
+  if (!isFinite(minX)) minX = 0;
+
   return lines.map(l => {
     l.parts.sort((a, b) => a.x - b.x);
-    return l.parts.map(p => p.str).join('');
-  }).filter(Boolean).join('\n');
+    if (!l.parts.length) return '';
+    let result = '';
+    let curX = minX;
+    l.parts.forEach(p => {
+      const gap = p.x - curX;
+      if (gap > unitW * 0.4) {
+        // 用全角空格（　）填充间距，与汉字等宽，确保同柱对齐
+        const n = Math.max(1, Math.round(gap / unitW));
+        result += '　'.repeat(n);
+      }
+      result += p.str;
+      curX = p.x + Math.max(p.w, p.str.length * unitW);
+    });
+    return result;
+  }).filter(l => l.trim()).join('\n');
 }
 
 async function enterTextMode() {
@@ -834,6 +857,9 @@ function exitTextMode() {
   document.getElementById('reader-main').style.display = 'flex';
   if (!S.scrollMode) {
     document.getElementById('reader-footer').style.display = 'flex';
+    if (S.pdf) renderPage(S.page);
+  } else {
+    if (S.pdf) renderScroll();
   }
 }
 

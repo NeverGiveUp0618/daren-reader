@@ -176,6 +176,42 @@ body {
 .skin-dot { width: 30px; height: 30px; border-radius: 50%; margin: 0 auto 7px; }
 
 /* ============================================================
+   FLOAT NOTE BUTTON + MODAL (mobile)
+   ============================================================ */
+#btn-float-note {
+  display: none; position: fixed; bottom: 24px; right: 18px; z-index: 500;
+  width: 52px; height: 52px; border-radius: 50%;
+  background: var(--ac); border: none; color: #fff;
+  font-size: 1.3rem; cursor: pointer;
+  box-shadow: 0 3px 14px rgba(0,0,0,.45);
+}
+#note-modal {
+  display: none; position: fixed; inset: 0; z-index: 800;
+  background: rgba(0,0,0,.55); align-items: flex-end; justify-content: center;
+}
+#note-modal.open { display: flex; }
+#note-modal-box {
+  background: var(--p1); border-radius: 18px 18px 0 0;
+  padding: 20px 16px 32px; width: 100%; max-width: 560px;
+}
+#note-modal-title { font-size: .85rem; color: var(--t1); margin-bottom: 10px; }
+#note-modal-ta {
+  width: 100%; background: var(--p0); border: 1px solid var(--bd2);
+  border-radius: 10px; color: var(--t0); padding: 10px 12px;
+  font-size: 1rem; font-family: inherit; resize: none; line-height: 1.7;
+}
+#note-modal-ta:focus { outline: none; border-color: var(--ac2); }
+#note-modal-actions { display: flex; gap: 10px; margin-top: 12px; }
+#note-modal-cancel {
+  padding: 12px 20px; background: var(--p2); border: 1px solid var(--bd2);
+  border-radius: 10px; color: var(--t1); font-size: .95rem; cursor: pointer; font-family: inherit;
+}
+#note-modal-save {
+  flex: 1; padding: 12px; background: var(--ac); border: none;
+  border-radius: 10px; color: #fff; font-size: .95rem; cursor: pointer; font-family: inherit;
+}
+
+/* ============================================================
    TOAST
    ============================================================ */
 #toast { position: fixed; bottom: 64px; left: 50%; transform: translateX(-50%); background: var(--p3); color: var(--t0); padding: 8px 20px; border-radius: 20px; border: 1px solid var(--bd2); font-size: .82rem; opacity: 0; pointer-events: none; transition: opacity .3s; z-index: 400; white-space: nowrap; }
@@ -311,6 +347,21 @@ body {
 </div>
 
 <div id="toast"></div>
+
+<!-- Mobile floating note button -->
+<button id="btn-float-note">📝</button>
+
+<!-- Mobile note modal -->
+<div id="note-modal">
+  <div id="note-modal-box">
+    <div id="note-modal-title">第 <span id="note-modal-pg">1</span> 页 · 添加笔记</div>
+    <textarea id="note-modal-ta" placeholder="写下你的想法…" rows="5"></textarea>
+    <div id="note-modal-actions">
+      <button id="note-modal-cancel">取消</button>
+      <button id="note-modal-save">保存</button>
+    </div>
+  </div>
+</div>
 
 <script>
 // ============================================================
@@ -541,6 +592,7 @@ async function openBook(book) {
     document.getElementById('reader-main').style.display    = 'flex';
     document.getElementById('text-view').style.display      = 'none';
     await renderScroll();
+    setFloatNoteVisible(true);
     refreshPanel();
   } catch(e) {
     showLoad(false);
@@ -806,6 +858,56 @@ function esc(s) {
 }
 
 // ============================================================
+//  MOBILE FLOAT NOTE
+// ============================================================
+function getCurrentScrollPage() {
+  const wraps = document.querySelectorAll('.scroll-page-wrap');
+  const mid = window.innerHeight / 2;
+  let best = null, bestDist = Infinity;
+  wraps.forEach(w => {
+    const r = w.getBoundingClientRect();
+    const dist = Math.abs((r.top + r.bottom) / 2 - mid);
+    if (dist < bestDist) { bestDist = dist; best = w; }
+  });
+  return best ? +best.dataset.pg : 1;
+}
+
+function setFloatNoteVisible(on) {
+  document.getElementById('btn-float-note').style.display =
+    (on && window.innerWidth <= 640) ? 'block' : 'none';
+}
+
+let _modalPg = 1;
+document.getElementById('btn-float-note').addEventListener('click', () => {
+  _modalPg = getCurrentScrollPage();
+  document.getElementById('note-modal-pg').textContent = _modalPg;
+  document.getElementById('note-modal-ta').value = '';
+  document.getElementById('note-modal').classList.add('open');
+  setTimeout(() => document.getElementById('note-modal-ta').focus(), 100);
+});
+
+document.getElementById('note-modal-cancel').addEventListener('click', () => {
+  document.getElementById('note-modal').classList.remove('open');
+});
+document.getElementById('note-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('note-modal'))
+    document.getElementById('note-modal').classList.remove('open');
+});
+document.getElementById('note-modal-save').addEventListener('click', () => {
+  const comment = document.getElementById('note-modal-ta').value.trim();
+  if (!comment) { toast('请输入内容'); return; }
+  if (!S.book) return;
+  const d = getNotes(S.book.id);
+  if (!d[_modalPg]) d[_modalPg] = [];
+  d[_modalPg].push({ id: Date.now(), quote: '', comment,
+                     at: new Date().toLocaleString('zh-CN') });
+  saveNotes(S.book.id, d);
+  document.getElementById('note-modal').classList.remove('open');
+  toast('笔记已保存 📌');
+  if (S.panelOpen) refreshPanel();
+});
+
+// ============================================================
 //  EXPORT
 // ============================================================
 document.getElementById('btn-export').addEventListener('click', () => {
@@ -916,6 +1018,7 @@ function goShelf() {
   document.getElementById('view-reader').style.display = 'none';
   document.getElementById('view-shelf').style.display  = 'block';
   document.getElementById('scroll-wrap').innerHTML = '';
+  setFloatNoteVisible(false);
   S.book = null; S.pdf = null; S.textMode = false;
   renderShelf();
 }

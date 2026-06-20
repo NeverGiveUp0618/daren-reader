@@ -858,7 +858,10 @@ async function enterTextMode() {
   for (let i = 1; i <= S.total; i++) {
     const page = await S.pdf.getPage(i);
     const tc   = await page.getTextContent();
-    const txt  = extractPageText(tc);
+    const txt  = extractPageText(tc)
+      // 遇到例（+冒号）、乾、坤时另起一行，使八字示例与正文分离
+      .replace(/([^\n])(例[：:])/g, '$1\n$2')
+      .replace(/([^\n])(乾|坤)/g, '$1\n$2');
     if (txt.trim()) hasText = true;
     html += `<div class="tv-page">
       <div class="tv-pg-label">第 ${i} 页</div>

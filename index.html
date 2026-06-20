@@ -1,0 +1,1334 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>任付红·民间实用八字 阅读室</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+:root {
+  --gold: #C8A96E;
+  --gold-dim: #8B7040;
+  --shelf-bg: #1A0D05;
+  --paper: #F5EDD8;
+  --dark-bg: #1C1C1C;
+  --toolbar-bg: #222;
+  --border: #333;
+  --text-dim: #888;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Noto Serif SC', 'SimSun', 'STSong', serif;
+  background: var(--shelf-bg);
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ===== SCROLLBAR ===== */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #111; }
+::-webkit-scrollbar-thumb { background: #3a3a3a; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #4a4a4a; }
+
+/* ===== LOADING ===== */
+#loading {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.8);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  flex-direction: column;
+  gap: 16px;
+  color: var(--gold);
+  font-size: 1rem;
+  letter-spacing: 0.1em;
+}
+.spinner {
+  width: 36px; height: 36px;
+  border: 3px solid #333;
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ===== BOOKSHELF VIEW ===== */
+#view-shelf {
+  height: 100vh;
+  overflow-y: auto;
+  background: radial-gradient(ellipse at 50% 0%, #2a1305 0%, #0d0502 100%);
+}
+
+.shelf-header {
+  text-align: center;
+  padding: 50px 20px 40px;
+}
+.shelf-header h1 {
+  font-size: 1.9rem;
+  color: var(--gold);
+  letter-spacing: 0.25em;
+  text-shadow: 0 0 30px rgba(200,169,110,0.4);
+}
+.shelf-header p {
+  color: var(--gold-dim);
+  margin-top: 10px;
+  font-size: 0.85rem;
+  letter-spacing: 0.1em;
+}
+
+.shelf-section { padding: 0 40px 10px; }
+
+.shelf-section-label {
+  color: var(--gold-dim);
+  font-size: 0.78rem;
+  letter-spacing: 0.3em;
+  padding: 0 8px 10px;
+  text-transform: uppercase;
+}
+
+.shelf-plank {
+  background: linear-gradient(180deg, #3D2010 0%, #4A2810 70%, #1f0e04 100%);
+  border-radius: 4px;
+  padding: 18px 20px 22px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  border-bottom: 10px solid #120700;
+  box-shadow:
+    inset 0 -6px 12px rgba(0,0,0,0.5),
+    0 6px 18px rgba(0,0,0,0.6),
+    inset 0 1px 0 rgba(255,200,100,0.06);
+  margin-bottom: 36px;
+}
+
+/* Book card */
+.book-card {
+  width: 130px;
+  height: 180px;
+  border-radius: 2px 7px 7px 2px;
+  cursor: pointer;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 12px 10px 10px;
+  transition: transform 0.22s ease, box-shadow 0.22s ease;
+  box-shadow:
+    -4px 4px 14px rgba(0,0,0,0.7),
+    inset -3px 0 8px rgba(0,0,0,0.3);
+  overflow: hidden;
+  user-select: none;
+}
+
+/* book spine shadow */
+.book-card::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 7px;
+  background: rgba(0,0,0,0.3);
+  border-radius: 2px 0 0 2px;
+}
+
+/* page edges */
+.book-card::after {
+  content: '';
+  position: absolute;
+  right: 0; top: 3px; bottom: 3px;
+  width: 5px;
+  background: repeating-linear-gradient(
+    180deg,
+    #f0e8d0 0px, #f0e8d0 1px,
+    #ddd4b8 1px, #ddd4b8 2px
+  );
+  border-radius: 0 3px 3px 0;
+}
+
+.book-card:hover {
+  transform: translateY(-10px) scale(1.03);
+  box-shadow:
+    -4px 16px 28px rgba(0,0,0,0.9),
+    inset -3px 0 8px rgba(0,0,0,0.3);
+}
+
+.book-num {
+  font-size: 0.68rem;
+  font-family: 'Courier New', monospace;
+  color: rgba(255,255,255,0.45);
+}
+
+.book-title-card {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: bold;
+  color: rgba(255,255,255,0.92);
+  line-height: 1.55;
+  padding: 4px 0;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+}
+
+.book-sub {
+  font-size: 0.66rem;
+  color: rgba(255,255,255,0.45);
+  text-align: center;
+  background: rgba(0,0,0,0.2);
+  border-radius: 8px;
+  padding: 2px 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.book-badge {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  font-size: 0.65rem;
+  color: rgba(255,215,0,0.75);
+}
+
+.book-progress-strip {
+  position: absolute;
+  bottom: 0; left: 7px; right: 5px;
+  height: 3px;
+  background: rgba(0,0,0,0.3);
+}
+.book-progress-fill {
+  height: 100%;
+  background: rgba(200,169,110,0.6);
+  transition: width 0.3s;
+  border-radius: 0 2px 2px 0;
+}
+
+/* ===== READER VIEW ===== */
+#view-reader {
+  display: none;
+  height: 100vh;
+  flex-direction: column;
+  background: var(--dark-bg);
+}
+
+/* Toolbar */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+  height: 46px;
+  background: var(--toolbar-bg);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.toolbar-btn {
+  padding: 4px 11px;
+  border: 1px solid #3a3a3a;
+  border-radius: 4px;
+  background: #2d2d2d;
+  color: #bbb;
+  cursor: pointer;
+  font-size: 0.82rem;
+  white-space: nowrap;
+  transition: background 0.12s, border-color 0.12s;
+  font-family: inherit;
+}
+.toolbar-btn:hover { background: #3a3a3a; border-color: #4a4a4a; }
+.toolbar-btn.active { background: #3a3a2a; border-color: #7a6a30; color: #d4b860; }
+
+.toolbar-divider {
+  width: 1px;
+  height: 24px;
+  background: #333;
+  flex-shrink: 0;
+}
+
+#book-title-bar {
+  flex: 1;
+  text-align: center;
+  font-size: 0.88rem;
+  color: #999;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 8px;
+}
+
+.zoom-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+#zoom-pct {
+  font-size: 0.78rem;
+  color: #777;
+  min-width: 38px;
+  text-align: center;
+}
+
+/* Reader body */
+.reader-body {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+#reader-main {
+  flex: 1;
+  overflow: auto;
+  background: #2a2a2a;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+/* Single page mode */
+#page-container {
+  padding: 24px;
+  display: flex;
+  justify-content: center;
+  min-width: 100%;
+}
+
+#canvas-wrap {
+  position: relative;
+  display: inline-block;
+  box-shadow: 0 4px 40px rgba(0,0,0,0.8);
+  line-height: 0;
+}
+
+#pdf-canvas {
+  display: block;
+  background: white;
+}
+
+#annot-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+#annot-overlay.note-mode {
+  pointer-events: all;
+  cursor: crosshair;
+}
+
+/* Scroll mode */
+#scroll-wrap {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 20px;
+  width: 100%;
+}
+
+.scroll-canvas {
+  display: block;
+  background: white;
+  box-shadow: 0 2px 14px rgba(0,0,0,0.5);
+}
+.scroll-page-label {
+  color: #444;
+  font-size: 0.72rem;
+  padding: 2px 0 10px;
+  text-align: center;
+  width: 100%;
+}
+
+/* Page-turn animation */
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(24px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-24px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.anim-right { animation: slideIn 0.18s ease; }
+.anim-left  { animation: slideInLeft 0.18s ease; }
+
+/* Footer */
+.reader-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  height: 44px;
+  background: var(--toolbar-bg);
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.footer-btn {
+  padding: 5px 20px;
+  border: 1px solid #3a3a3a;
+  border-radius: 4px;
+  background: #2d2d2d;
+  color: #ccc;
+  cursor: pointer;
+  font-size: 0.88rem;
+  font-family: inherit;
+  transition: background 0.12s;
+}
+.footer-btn:hover { background: #3a3a3a; }
+.footer-btn:disabled { opacity: 0.28; cursor: default; background: #2d2d2d; }
+
+#page-in {
+  width: 52px;
+  text-align: center;
+  background: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 4px;
+  color: #ccc;
+  padding: 4px 6px;
+  font-size: 0.88rem;
+}
+#page-total { color: #555; font-size: 0.85rem; }
+#progress-pct { color: #444; font-size: 0.78rem; min-width: 36px; }
+
+/* ===== NOTES PANEL ===== */
+#notes-panel {
+  width: 290px;
+  flex-shrink: 0;
+  display: none;
+  flex-direction: column;
+  background: #1a1a1a;
+  border-left: 1px solid var(--border);
+}
+
+.np-header {
+  padding: 10px 14px;
+  border-bottom: 1px solid #2a2a2a;
+  background: #202020;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+.np-header h3 { font-size: 0.88rem; color: #bbb; }
+.np-header label {
+  font-size: 0.75rem;
+  color: #666;
+  display: flex; align-items: center; gap: 5px; cursor: pointer;
+}
+.np-header input[type=checkbox] { cursor: pointer; }
+
+.np-add {
+  margin: 10px 12px 4px;
+  padding: 8px 10px;
+  background: #1e2a1e;
+  border: 1px dashed #3a5a3a;
+  border-radius: 5px;
+  color: #6a9a6a;
+  font-size: 0.8rem;
+  text-align: center;
+  cursor: pointer;
+  transition: background 0.12s;
+  flex-shrink: 0;
+}
+.np-add:hover { background: #253525; }
+.np-add.active { border-style: solid; border-color: #5a8a5a; color: #9ac89a; background: #2a3a2a; }
+
+#notes-list { flex: 1; overflow-y: auto; padding: 6px 10px 10px; }
+
+.note-item {
+  background: #242424;
+  border-left: 3px solid #FFD700;
+  border-radius: 4px;
+  padding: 9px 30px 9px 10px;
+  margin-bottom: 7px;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.12s;
+}
+.note-item:hover { background: #2d2d2d; }
+.note-pg { font-size: 0.7rem; color: #666; margin-bottom: 3px; }
+.note-text { font-size: 0.82rem; color: #bbb; line-height: 1.55; word-break: break-all; }
+.note-time { font-size: 0.68rem; color: #444; margin-top: 4px; }
+.note-del {
+  position: absolute; top: 7px; right: 7px;
+  font-size: 0.7rem; color: #3a3a3a;
+  padding: 2px 5px; border-radius: 3px;
+  cursor: pointer;
+}
+.note-del:hover { background: #3a2020; color: #d08080; }
+
+.np-empty { color: #444; text-align: center; padding: 30px 0; font-size: 0.82rem; }
+
+/* ===== NOTE POPUP ===== */
+#note-popup {
+  position: fixed;
+  width: 260px;
+  background: #252525;
+  border: 1px solid #3a3a3a;
+  border-radius: 8px;
+  padding: 12px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.8);
+  z-index: 500;
+  display: none;
+}
+
+#note-ta {
+  width: 100%;
+  height: 86px;
+  background: #1a1a1a;
+  border: 1px solid #3a3a3a;
+  border-radius: 4px;
+  color: #ddd;
+  padding: 8px;
+  font-size: 0.83rem;
+  resize: none;
+  font-family: inherit;
+  line-height: 1.55;
+}
+#note-ta:focus { outline: none; border-color: #5a5a5a; }
+
+.color-row { display: flex; gap: 7px; margin: 8px 0 10px; }
+.cdot {
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: transform 0.12s;
+}
+.cdot:hover { transform: scale(1.2); }
+.cdot.sel { border-color: #fff; transform: scale(1.15); }
+
+.popup-row { display: flex; gap: 8px; }
+.popup-row button {
+  flex: 1; padding: 6px;
+  border-radius: 4px;
+  border: 1px solid #3a3a3a;
+  font-size: 0.82rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+#btn-save-note { background: #1e3020; color: #80c080; border-color: #3a6040; }
+#btn-save-note:hover { background: #26403a; }
+#btn-cancel-note { background: #2a2a2a; color: #999; }
+#btn-cancel-note:hover { background: #333; }
+
+/* Note pin on canvas */
+.pin {
+  position: absolute;
+  width: 22px; height: 22px;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg) translate(-50%, -50%);
+  cursor: pointer;
+  pointer-events: all;
+  transition: transform 0.15s, filter 0.15s;
+  filter: drop-shadow(0 1px 3px rgba(0,0,0,0.5));
+}
+.pin:hover {
+  transform: rotate(-45deg) translate(-50%, -50%) scale(1.25);
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,0.7));
+}
+.pin-n {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  transform: rotate(45deg);
+  font-size: 10px; font-weight: bold;
+  color: rgba(0,0,0,0.65);
+}
+
+/* ===== BOOKMARK TOAST ===== */
+#toast {
+  position: fixed;
+  bottom: 60px; left: 50%;
+  transform: translateX(-50%);
+  background: #333;
+  color: #ccc;
+  padding: 7px 18px;
+  border-radius: 20px;
+  font-size: 0.82rem;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s;
+  z-index: 400;
+  white-space: nowrap;
+}
+#toast.show { opacity: 1; }
+
+/* ===== MOBILE ===== */
+@media (max-width: 640px) {
+  /* Bookshelf */
+  .shelf-header { padding: 30px 16px 24px; }
+  .shelf-header h1 { font-size: 1.35rem; letter-spacing: 0.15em; }
+  .shelf-section { padding: 0 12px 8px; }
+  .shelf-plank { gap: 10px; padding: 12px 10px 16px; margin-bottom: 20px; }
+  .book-card { width: 88px; height: 126px; }
+  .book-title-card { font-size: 0.78rem; }
+  .book-sub { font-size: 0.58rem; }
+
+  /* Toolbar: title row + controls row */
+  .toolbar {
+    height: auto;
+    flex-wrap: wrap;
+    padding: 5px 8px;
+    gap: 4px;
+    row-gap: 0;
+  }
+  #book-title-bar {
+    order: -1;
+    flex-basis: 100%;
+    text-align: left;
+    font-size: 0.76rem;
+    padding: 3px 0 5px;
+    border-bottom: 1px solid #2a2a2a;
+    margin-bottom: 3px;
+  }
+  .toolbar-divider { display: none; }
+  .toolbar-btn { padding: 4px 8px; font-size: 0.72rem; }
+  .zoom-group { gap: 3px; }
+  #zoom-pct { min-width: 28px; font-size: 0.72rem; }
+
+  /* Notes panel: full-screen overlay on mobile */
+  #notes-panel {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100% !important;
+    z-index: 300;
+  }
+
+  /* Footer: compact */
+  .reader-footer { height: 40px; gap: 10px; }
+  .footer-btn { padding: 4px 14px; font-size: 0.82rem; }
+  #page-in { width: 44px; font-size: 0.82rem; }
+  #page-total { font-size: 0.78rem; }
+
+  /* Note popup: full-width */
+  #note-popup { width: calc(100vw - 24px); left: 12px !important; }
+}
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <div class="spinner"></div>
+  <div>正在加载书籍...</div>
+</div>
+
+<!-- ======================== BOOKSHELF ======================== -->
+<div id="view-shelf">
+  <div class="shelf-header">
+    <h1>任付红·民间实用八字</h1>
+    <p>共 22 册 · 点击书籍开始阅读</p>
+  </div>
+  <div id="shelf-container"></div>
+  <div style="height:50px"></div>
+</div>
+
+<!-- ======================== READER ======================== -->
+<div id="view-reader">
+  <div class="toolbar">
+    <button class="toolbar-btn" id="btn-back">← 书架</button>
+    <div class="toolbar-divider"></div>
+    <div id="book-title-bar">—</div>
+    <div class="toolbar-divider"></div>
+    <div class="zoom-group">
+      <button class="toolbar-btn" id="btn-zoom-out" title="缩小 (-)">A−</button>
+      <span id="zoom-pct">140%</span>
+      <button class="toolbar-btn" id="btn-zoom-in"  title="放大 (+)">A+</button>
+    </div>
+    <div class="toolbar-divider"></div>
+    <button class="toolbar-btn" id="btn-mode"  title="切换翻页/滚动">📖 翻页</button>
+    <button class="toolbar-btn" id="btn-note-mode" title="点击页面添加笔记">📌 添加笔记</button>
+    <button class="toolbar-btn" id="btn-panel" title="笔记面板">📋 笔记</button>
+    <div class="toolbar-divider"></div>
+    <button class="toolbar-btn" id="btn-export" title="导出笔记为文本">💾 导出</button>
+  </div>
+
+  <div class="reader-body">
+    <div id="reader-main">
+      <!-- Page mode -->
+      <div id="page-container">
+        <div id="canvas-wrap">
+          <canvas id="pdf-canvas"></canvas>
+          <div id="annot-overlay"></div>
+        </div>
+      </div>
+      <!-- Scroll mode -->
+      <div id="scroll-wrap"></div>
+    </div>
+
+    <!-- Notes panel -->
+    <div id="notes-panel">
+      <div class="np-header">
+        <h3>📌 笔记</h3>
+        <div style="display:flex;align-items:center;gap:10px">
+          <label><input type="checkbox" id="filter-pg"> 仅本页</label>
+          <button id="btn-close-panel" style="display:none;background:#2a2a2a;border:1px solid #444;color:#aaa;border-radius:4px;padding:2px 8px;cursor:pointer;font-size:0.8rem">✕ 关闭</button>
+        </div>
+      </div>
+      <div class="np-add" id="np-add-btn">+ 点击页面插入笔记</div>
+      <div id="notes-list"></div>
+    </div>
+  </div>
+
+  <div class="reader-footer" id="reader-footer">
+    <button class="footer-btn" id="btn-prev">◀ 上一页</button>
+    <div style="display:flex;align-items:center;gap:8px">
+      <input type="number" id="page-in" min="1" value="1">
+      <span id="page-total">/ 0 页</span>
+    </div>
+    <button class="footer-btn" id="btn-next">下一页 ▶</button>
+    <span id="progress-pct"></span>
+  </div>
+</div>
+
+<!-- ======================== NOTE POPUP ======================== -->
+<div id="note-popup">
+  <textarea id="note-ta" placeholder="输入笔记内容..."></textarea>
+  <div class="color-row">
+    <div class="cdot sel" data-color="#FFD700" style="background:#FFD700" title="金"></div>
+    <div class="cdot"     data-color="#FF6B6B" style="background:#FF6B6B" title="红"></div>
+    <div class="cdot"     data-color="#51CF66" style="background:#51CF66" title="绿"></div>
+    <div class="cdot"     data-color="#74C0FC" style="background:#74C0FC" title="蓝"></div>
+    <div class="cdot"     data-color="#E599F7" style="background:#E599F7" title="紫"></div>
+  </div>
+  <div class="popup-row">
+    <button id="btn-save-note">保存</button>
+    <button id="btn-cancel-note">取消</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ============================================================
+//  PDF.js worker
+// ============================================================
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+// ============================================================
+//  BOOK LIST
+// ============================================================
+const BOOKS = [
+  // 班级教材
+  { id: 3,  series:'班级', color:'#1E5E30', sub:'民间实用八字', title:'初级班',
+    file:'大任老资料/03、任付红-《民间实用八字初级班》.pdf' },
+  { id: 15, series:'班级', color:'#1A3D6A', sub:'民间实用八字', title:'中级班',
+    file:'大任老资料/15、任付红-《民间实用八字中级班》.pdf' },
+  { id: 5,  series:'班级', color:'#6A1414', sub:'民间实用八字', title:'高级班',
+    file:'大任老资料/05、任付红-《民间实用八字高级班》.pdf' },
+  // 实战系列
+  { id: 4,  series:'实战', color:'#3A1060', sub:'民间实用八字', title:'断命例题解',
+    file:'大任老资料/04、任付红-《民间实用八字断命例题解》.pdf' },
+  { id: 11, series:'实战', color:'#5E1010', sub:'民间实用八字', title:'实战技巧',
+    file:'大任老资料/11、任付红-《民间实用八字实战技巧》.pdf' },
+  { id: 16, series:'实战', color:'#4A0C30', sub:'民间实用八字', title:'实战技巧·完整版',
+    file:'大任老资料/16、任付红-《民间实用八字实战技巧》完整版.pdf' },
+  // 专题篇
+  { id: 1,  series:'专题', color:'#7A3A10', sub:'民间实用八字', title:'财运篇',
+    file:'大任老资料/01、任付红-《民间实用八字财运篇》.pdf' },
+  { id: 2,  series:'专题', color:'#7A1A1A', sub:'民间实用八字', title:'车祸篇',
+    file:'大任老资料/02、任付红《民间实用八字车祸篇》.pdf' },
+  { id: 6,  series:'专题', color:'#7A5A10', sub:'民间实用八字', title:'官运篇',
+    file:'大任老资料/06、任付红-《民间实用八字官运篇》.pdf' },
+  { id: 7,  series:'专题', color:'#7A1450', sub:'民间实用八字', title:'婚姻篇',
+    file:'大任老资料/07、任付红-《民间实用八字婚姻篇》.pdf' },
+  { id: 8,  series:'专题', color:'#1E4040', sub:'民间实用八字', title:'疾病篇',
+    file:'大任老资料/08、任付红《民间实用八字疾病篇》.pdf' },
+  { id: 9,  series:'专题', color:'#3A3A3A', sub:'民间实用八字', title:'牢狱篇',
+    file:'大任老资料/09、任付红《民间实用八字牢狱篇》.pdf' },
+  { id: 10, series:'专题', color:'#2A4E1A', sub:'民间实用八字', title:'六亲篇',
+    file:'大任老资料/10、任付红《民间实用八字六亲篇》.pdf' },
+  { id: 12, series:'专题', color:'#2A2A6A', sub:'民间实用八字', title:'寿命篇',
+    file:'大任老资料/12、任付红《民间实用八字寿命篇》.pdf' },
+  { id: 13, series:'专题', color:'#124A12', sub:'民间实用八字', title:'学历篇',
+    file:'大任老资料/13、任付红《民间实用八字学历篇》.pdf' },
+  { id: 14, series:'专题', color:'#4A1060', sub:'民间实用八字', title:'职业篇',
+    file:'大任老资料/14、任付红《民间实用八字职业篇》.pdf' },
+  // 使用方法
+  { id: 17, series:'方法', color:'#3A2508', sub:'使用方法', title:'八字刑冲破害',
+    file:'大任老资料/17、任付红-民间实用八字-八字刑冲破害的使用方法.pdf' },
+  { id: 18, series:'方法', color:'#083A28', sub:'使用方法', title:'地支四墓库',
+    file:'大任老资料/18、任付红-民间实用八字-地支四墓库的使用方法.pdf' },
+  { id: 19, series:'方法', color:'#280838', sub:'使用方法', title:'神煞断命',
+    file:'大任老资料/19、任付红-民间实用八字-神煞在实战断命时的使用方法.pdf' },
+  // 其他
+  { id: 20, series:'笔记', color:'#2E200A', sub:'盲派命理', title:'2012高级面授彩色笔记',
+    file:'大任老资料/2012盲派命理民间实用八字高级面授班录音彩色笔记 .pdf' },
+  { id: 21, series:'法门', color:'#0A1830', sub:'任付红', title:'十八道法门',
+    file:'大任老资料/任付红-十八道法门.pdf' },
+  { id: 22, series:'六爻', color:'#142808', sub:'民间实用八字', title:'六爻',
+    file:'大任老资料/任付红-民间实用八字-六爻.pdf' },
+];
+
+const SERIES_ORDER  = ['班级','实战','专题','方法','笔记','法门','六爻'];
+const SERIES_LABELS = { 班级:'班级教材', 实战:'实战系列', 专题:'专题篇',
+                        方法:'使用方法', 笔记:'面授笔记', 法门:'法门', 六爻:'六爻' };
+
+// ============================================================
+//  STATE
+// ============================================================
+let S = {
+  book: null,
+  pdf: null,
+  page: 1,
+  total: 0,
+  scale: 1.4,
+  scrollMode: false,
+  noteMode: false,
+  panelOpen: false,
+  pending: null,     // {x,y} pct coords for new note
+  editId: null,      // id of note being edited
+  color: '#FFD700',
+};
+
+// ============================================================
+//  STORAGE HELPERS
+// ============================================================
+const nKey = id => `daren_notes_${id}`;
+const pKey = id => `daren_prog_${id}`;
+
+function getNotes(id) {
+  try { return JSON.parse(localStorage.getItem(nKey(id)) || '{}'); }
+  catch { return {}; }
+}
+function saveNotes(id, data) {
+  localStorage.setItem(nKey(id), JSON.stringify(data));
+}
+function getProgress(id) {
+  return parseInt(localStorage.getItem(pKey(id)) || '1') || 1;
+}
+function saveProgress(id, pg) {
+  localStorage.setItem(pKey(id), pg);
+}
+function addNote(id, pg, x, y, text, color) {
+  const d = getNotes(id);
+  if (!d[pg]) d[pg] = [];
+  const note = { id: Date.now(), x, y, text, color,
+                 at: new Date().toLocaleString('zh-CN') };
+  d[pg].push(note);
+  saveNotes(id, d);
+  return note;
+}
+function deleteNote(bookId, pg, noteId) {
+  const d = getNotes(bookId);
+  if (d[pg]) {
+    d[pg] = d[pg].filter(n => n.id !== noteId);
+    if (!d[pg].length) delete d[pg];
+  }
+  saveNotes(bookId, d);
+}
+function totalNoteCount(id) {
+  const d = getNotes(id);
+  return Object.values(d).reduce((s,a)=>s+a.length, 0);
+}
+
+// ============================================================
+//  BOOKSHELF
+// ============================================================
+function renderShelf() {
+  const cnt = document.getElementById('shelf-container');
+  cnt.innerHTML = '';
+
+  const groups = {};
+  BOOKS.forEach(b => {
+    if (!groups[b.series]) groups[b.series] = [];
+    groups[b.series].push(b);
+  });
+
+  SERIES_ORDER.forEach(s => {
+    if (!groups[s]) return;
+    const sec = document.createElement('div');
+    sec.className = 'shelf-section';
+
+    const lbl = document.createElement('div');
+    lbl.className = 'shelf-section-label';
+    lbl.textContent = SERIES_LABELS[s];
+    sec.appendChild(lbl);
+
+    const plank = document.createElement('div');
+    plank.className = 'shelf-plank';
+
+    groups[s].forEach(b => {
+      const nc = totalNoteCount(b.id);
+      const prog = getProgress(b.id);
+      const card = document.createElement('div');
+      card.className = 'book-card';
+      card.style.background =
+        `linear-gradient(135deg, ${lighten(b.color,18)} 0%, ${b.color} 55%, ${darken(b.color,18)} 100%)`;
+
+      card.innerHTML = `
+        <div class="book-num">No.${String(b.id).padStart(2,'0')}</div>
+        ${nc > 0 ? `<div class="book-badge">📌${nc}</div>` : ''}
+        <div class="book-title-card">${b.title}</div>
+        <div class="book-sub">${b.sub}</div>
+        <div class="book-progress-strip">
+          <div class="book-progress-fill" style="width:0%"></div>
+        </div>`;
+
+      card.addEventListener('click', () => openBook(b));
+      plank.appendChild(card);
+    });
+
+    sec.appendChild(plank);
+    cnt.appendChild(sec);
+  });
+}
+
+function lighten(hex, amt) { return shiftHex(hex, amt); }
+function darken(hex, amt)  { return shiftHex(hex, -amt); }
+function shiftHex(hex, amt) {
+  const n = parseInt(hex.replace('#',''), 16);
+  const r = Math.max(0, Math.min(255, (n>>16) + amt));
+  const g = Math.max(0, Math.min(255, ((n>>8)&255) + amt));
+  const b = Math.max(0, Math.min(255, (n&255) + amt));
+  return '#' + ((r<<16)|(g<<8)|b).toString(16).padStart(6,'0');
+}
+
+// ============================================================
+//  OPEN BOOK
+// ============================================================
+async function openBook(book) {
+  S.book = book;
+  S.page = getProgress(book.id);
+  S.pdf  = null;
+  S.noteMode = false;
+
+  document.getElementById('view-shelf').style.display = 'none';
+  const rv = document.getElementById('view-reader');
+  rv.style.display = 'flex';
+
+  document.getElementById('book-title-bar').textContent =
+    `${book.sub} · ${book.title}`;
+  document.getElementById('btn-note-mode').classList.remove('active');
+  document.getElementById('annot-overlay').classList.remove('note-mode');
+  document.getElementById('np-add-btn').classList.remove('active');
+
+  showLoad(true);
+  try {
+    S.pdf = await pdfjsLib.getDocument(book.file).promise;
+    S.total = S.pdf.numPages;
+    document.getElementById('page-total').textContent = `/ ${S.total} 页`;
+    document.getElementById('page-in').max = S.total;
+
+    // Auto-fit scale on mobile based on first page width
+    if (window.innerWidth <= 640) {
+      const firstPage = await S.pdf.getPage(1);
+      const vp1 = firstPage.getViewport({ scale: 1 });
+      const availW = document.getElementById('reader-main').clientWidth - 32;
+      S.scale = Math.min(1.4, Math.max(0.5, availW / vp1.width));
+    }
+    document.getElementById('zoom-pct').textContent = Math.round(S.scale*100) + '%';
+
+    if (S.scrollMode) {
+      await renderScroll();
+    } else {
+      await renderPage(S.page);
+    }
+    refreshPanel();
+  } catch(e) {
+    showLoad(false);
+    alert(
+      `⚠ 无法加载 PDF\n\n` +
+      `原因: ${e.message}\n\n` +
+      `请双击同目录下的「启动阅读器.bat」\n` +
+      `通过本地服务器（localhost）打开本页面。`
+    );
+    goShelf();
+    return;
+  }
+  showLoad(false);
+}
+
+// ============================================================
+//  RENDER PAGE (flip mode)
+// ============================================================
+async function renderPage(pg, dir) {
+  if (!S.pdf) return;
+  pg = Math.max(1, Math.min(pg, S.total));
+  S.page = pg;
+
+  const page     = await S.pdf.getPage(pg);
+  const viewport = page.getViewport({ scale: S.scale });
+  const canvas   = document.getElementById('pdf-canvas');
+  const ctx      = canvas.getContext('2d');
+
+  canvas.width  = viewport.width;
+  canvas.height = viewport.height;
+
+  // Wrap sizing (for overlay alignment)
+  const wrap = document.getElementById('canvas-wrap');
+  wrap.style.width  = viewport.width  + 'px';
+  wrap.style.height = viewport.height + 'px';
+
+  if (dir) {
+    canvas.classList.remove('anim-right','anim-left');
+    void canvas.offsetWidth;
+    canvas.classList.add(dir === 'next' ? 'anim-right' : 'anim-left');
+  }
+
+  await page.render({ canvasContext: ctx, viewport }).promise;
+
+  document.getElementById('page-in').value = pg;
+  document.getElementById('progress-pct').textContent =
+    Math.round(pg / S.total * 100) + '%';
+  document.getElementById('btn-prev').disabled = pg <= 1;
+  document.getElementById('btn-next').disabled = pg >= S.total;
+
+  saveProgress(S.book.id, pg);
+  renderPins();
+  refreshPanel();
+  document.getElementById('reader-main').scrollTo(0, 0);
+}
+
+// ============================================================
+//  RENDER SCROLL MODE
+// ============================================================
+async function renderScroll() {
+  const wrap = document.getElementById('scroll-wrap');
+  wrap.innerHTML = '';
+  if (!S.pdf) return;
+  showLoad(true);
+  for (let i = 1; i <= S.total; i++) {
+    const page     = await S.pdf.getPage(i);
+    const viewport = page.getViewport({ scale: S.scale });
+    const canvas   = document.createElement('canvas');
+    canvas.className = 'scroll-canvas';
+    canvas.width  = viewport.width;
+    canvas.height = viewport.height;
+    await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+
+    const lbl = document.createElement('div');
+    lbl.className = 'scroll-page-label';
+    lbl.textContent = `第 ${i} 页`;
+
+    wrap.appendChild(canvas);
+    wrap.appendChild(lbl);
+  }
+  showLoad(false);
+}
+
+// ============================================================
+//  ANNOTATION PINS
+// ============================================================
+function renderPins() {
+  const overlay = document.getElementById('annot-overlay');
+  overlay.innerHTML = '';
+  if (!S.book) return;
+  const notes = getNotes(S.book.id);
+  const pg = notes[S.page] || [];
+  pg.forEach((n, i) => {
+    const pin = document.createElement('div');
+    pin.className = 'pin';
+    pin.style.cssText =
+      `left:${n.x*100}%;top:${n.y*100}%;background:${n.color||'#FFD700'};`;
+    pin.title = n.text;
+    pin.innerHTML = `<div class="pin-n">${i+1}</div>`;
+    pin.addEventListener('click', e => {
+      e.stopPropagation();
+      openPopupEdit(n, e.clientX, e.clientY);
+    });
+    overlay.appendChild(pin);
+  });
+}
+
+// ============================================================
+//  NOTE POPUP
+// ============================================================
+function openPopupNew(x, y, px, py) {
+  S.pending = { x, y };
+  S.editId  = null;
+  document.getElementById('note-ta').value = '';
+  placePopup(px, py);
+}
+
+function openPopupEdit(note, px, py) {
+  S.pending = { x: note.x, y: note.y };
+  S.editId  = note.id;
+  document.getElementById('note-ta').value = note.text;
+  setColor(note.color || '#FFD700');
+  placePopup(px, py);
+}
+
+function placePopup(px, py) {
+  const p = document.getElementById('note-popup');
+  p.style.left = Math.min(px, window.innerWidth  - 274) + 'px';
+  p.style.top  = Math.min(py + 10, window.innerHeight - 180) + 'px';
+  p.style.display = 'block';
+  document.getElementById('note-ta').focus();
+}
+
+function closePopup() {
+  document.getElementById('note-popup').style.display = 'none';
+  S.pending = null;
+  S.editId  = null;
+}
+
+function setColor(c) {
+  S.color = c;
+  document.querySelectorAll('.cdot').forEach(d =>
+    d.classList.toggle('sel', d.dataset.color === c));
+}
+
+document.getElementById('btn-save-note').addEventListener('click', () => {
+  const text = document.getElementById('note-ta').value.trim();
+  if (!text || !S.book) return;
+
+  if (S.editId !== null) {
+    const d = getNotes(S.book.id);
+    (d[S.page] || []).forEach(n => {
+      if (n.id === S.editId) { n.text = text; n.color = S.color; }
+    });
+    saveNotes(S.book.id, d);
+  } else {
+    addNote(S.book.id, S.page, S.pending.x, S.pending.y, text, S.color);
+  }
+  closePopup();
+  renderPins();
+  refreshPanel();
+  toast('笔记已保存');
+});
+
+document.getElementById('btn-cancel-note').addEventListener('click', closePopup);
+
+document.querySelectorAll('.cdot').forEach(d =>
+  d.addEventListener('click', () => setColor(d.dataset.color)));
+
+// Overlay click to place pin
+document.getElementById('annot-overlay').addEventListener('click', e => {
+  if (!S.noteMode) return;
+  const rect = document.getElementById('annot-overlay').getBoundingClientRect();
+  const x = (e.clientX - rect.left)  / rect.width;
+  const y = (e.clientY - rect.top)   / rect.height;
+  openPopupNew(x, y, e.clientX, e.clientY);
+});
+
+// Close popup on outside click
+document.addEventListener('click', e => {
+  const p = document.getElementById('note-popup');
+  if (p.style.display !== 'none' &&
+      !p.contains(e.target) &&
+      !e.target.classList.contains('pin')) {
+    closePopup();
+  }
+});
+
+// ============================================================
+//  NOTES PANEL
+// ============================================================
+function refreshPanel() {
+  if (!S.panelOpen) return;
+  const list = document.getElementById('notes-list');
+  list.innerHTML = '';
+  if (!S.book) return;
+
+  const data   = getNotes(S.book.id);
+  const filter = document.getElementById('filter-pg').checked;
+
+  let all = [];
+  Object.entries(data).forEach(([pg, arr]) =>
+    arr.forEach(n => all.push({ ...n, pg: +pg })));
+  all.sort((a,b) => a.pg - b.pg || a.id - b.id);
+  if (filter) all = all.filter(n => n.pg === S.page);
+
+  if (!all.length) {
+    list.innerHTML = '<div class="np-empty">暂无笔记</div>';
+    return;
+  }
+
+  all.forEach(n => {
+    const el = document.createElement('div');
+    el.className = 'note-item';
+    el.style.borderLeftColor = n.color || '#FFD700';
+    el.innerHTML = `
+      <div class="note-pg">第 ${n.pg} 页</div>
+      <div class="note-text">${esc(n.text)}</div>
+      <div class="note-time">${n.at}</div>
+      <div class="note-del" data-id="${n.id}" data-pg="${n.pg}">✕</div>`;
+
+    el.querySelector('.note-del').addEventListener('click', e => {
+      e.stopPropagation();
+      deleteNote(S.book.id, n.pg, n.id);
+      renderPins();
+      refreshPanel();
+    });
+
+    el.addEventListener('click', e => {
+      if (e.target.classList.contains('note-del')) return;
+      if (!S.scrollMode && n.pg !== S.page) renderPage(n.pg, 'next');
+    });
+
+    list.appendChild(el);
+  });
+}
+
+document.getElementById('filter-pg').addEventListener('change', refreshPanel);
+
+function esc(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+          .replace(/\n/g,'<br>');
+}
+
+// ============================================================
+//  EXPORT
+// ============================================================
+document.getElementById('btn-export').addEventListener('click', () => {
+  if (!S.book) { toast('请先打开一本书'); return; }
+  const data  = getNotes(S.book.id);
+  const pages = Object.keys(data).map(Number).sort((a,b)=>a-b);
+  if (!pages.length) { toast('当前书籍暂无笔记'); return; }
+
+  let out = `${S.book.sub}·${S.book.title}  读书笔记\n`;
+  out += `导出时间：${new Date().toLocaleString('zh-CN')}\n`;
+  out += '─'.repeat(40) + '\n\n';
+  pages.forEach(pg => {
+    data[pg].forEach(n => {
+      out += `▎第 ${pg} 页\n${n.text}\n（${n.at}）\n\n`;
+    });
+  });
+
+  const a = Object.assign(document.createElement('a'), {
+    href: URL.createObjectURL(new Blob([out], {type:'text/plain;charset=utf-8'})),
+    download: `${S.book.title}_笔记.txt`,
+  });
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast('笔记已导出');
+});
+
+// ============================================================
+//  TOOLBAR EVENTS
+// ============================================================
+document.getElementById('btn-back').addEventListener('click', goShelf);
+
+function goShelf() {
+  document.getElementById('view-reader').style.display = 'none';
+  document.getElementById('view-shelf').style.display  = 'block';
+  S.book = null; S.pdf = null;
+  renderShelf();
+}
+
+// Zoom
+document.getElementById('btn-zoom-out').addEventListener('click', () => zoom(-0.15));
+document.getElementById('btn-zoom-in' ).addEventListener('click', () => zoom(+0.15));
+
+async function zoom(delta) {
+  S.scale = Math.max(0.4, Math.min(3.0, S.scale + delta));
+  document.getElementById('zoom-pct').textContent = Math.round(S.scale*100) + '%';
+  showLoad(true);
+  if (S.scrollMode) await renderScroll();
+  else await renderPage(S.page);
+  showLoad(false);
+}
+
+// Mode toggle
+document.getElementById('btn-mode').addEventListener('click', async () => {
+  S.scrollMode = !S.scrollMode;
+  const pc = document.getElementById('page-container');
+  const sw = document.getElementById('scroll-wrap');
+  const ft = document.getElementById('reader-footer');
+  const ao = document.getElementById('annot-overlay');
+
+  pc.style.display = S.scrollMode ? 'none' : 'flex';
+  sw.style.display = S.scrollMode ? 'flex' : 'none';
+  ft.style.display = S.scrollMode ? 'none' : 'flex';
+  ao.style.pointerEvents = S.scrollMode ? 'none' : '';
+  if (S.scrollMode && S.noteMode) {
+    S.noteMode = false;
+    document.getElementById('btn-note-mode').classList.remove('active');
+    document.getElementById('np-add-btn').classList.remove('active');
+  }
+  document.getElementById('btn-mode').textContent = S.scrollMode ? '📄 翻页' : '📖 翻页';
+
+  showLoad(true);
+  if (S.scrollMode) await renderScroll();
+  else await renderPage(S.page);
+  showLoad(false);
+});
+
+// Note mode
+function toggleNoteMode(on) {
+  S.noteMode = (on === undefined) ? !S.noteMode : on;
+  const el = document.getElementById('annot-overlay');
+  el.classList.toggle('note-mode', S.noteMode && !S.scrollMode);
+  document.getElementById('btn-note-mode').classList.toggle('active', S.noteMode);
+  document.getElementById('np-add-btn').classList.toggle('active', S.noteMode);
+  if (S.noteMode) toast('已进入笔记模式，点击页面插入笔记');
+}
+document.getElementById('btn-note-mode').addEventListener('click', () => toggleNoteMode());
+document.getElementById('np-add-btn').addEventListener('click', () => toggleNoteMode());
+
+// Panel toggle
+function setPanelOpen(open) {
+  S.panelOpen = open;
+  document.getElementById('notes-panel').style.display = open ? 'flex' : 'none';
+  document.getElementById('btn-panel').classList.toggle('active', open);
+  document.getElementById('btn-close-panel').style.display =
+    (open && window.innerWidth <= 640) ? 'inline-block' : 'none';
+  if (open) refreshPanel();
+}
+document.getElementById('btn-panel').addEventListener('click', () => setPanelOpen(!S.panelOpen));
+document.getElementById('btn-close-panel').addEventListener('click', () => setPanelOpen(false));
+
+// ============================================================
+//  PAGE NAVIGATION
+// ============================================================
+document.getElementById('btn-prev').addEventListener('click', () => {
+  if (S.page > 1) renderPage(S.page - 1, 'prev');
+});
+document.getElementById('btn-next').addEventListener('click', () => {
+  if (S.page < S.total) renderPage(S.page + 1, 'next');
+});
+document.getElementById('page-in').addEventListener('change', e => {
+  const p = parseInt(e.target.value);
+  if (p >= 1 && p <= S.total) renderPage(p, 'next');
+});
+
+// Keyboard navigation
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
+  if (document.getElementById('view-reader').style.display === 'none') return;
+  if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')    { e.preventDefault(); if (S.page>1)      renderPage(S.page-1,'prev'); }
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown')  { e.preventDefault(); if (S.page<S.total) renderPage(S.page+1,'next'); }
+  if (e.key === 'Escape')   closePopup();
+  if (e.key === '+' || e.key === '=') zoom(+0.1);
+  if (e.key === '-')                  zoom(-0.1);
+});
+
+// Touch swipe
+let touchX0 = 0;
+document.getElementById('reader-main').addEventListener('touchstart', e => {
+  touchX0 = e.touches[0].clientX;
+}, { passive: true });
+document.getElementById('reader-main').addEventListener('touchend', e => {
+  const dx = e.changedTouches[0].clientX - touchX0;
+  if (Math.abs(dx) > 60) {
+    if (dx < 0 && S.page < S.total) renderPage(S.page+1,'next');
+    if (dx > 0 && S.page > 1)       renderPage(S.page-1,'prev');
+  }
+});
+
+// ============================================================
+//  UTILS
+// ============================================================
+function showLoad(on) {
+  document.getElementById('loading').style.display = on ? 'flex' : 'none';
+}
+
+let toastTimer;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2000);
+}
+
+// ============================================================
+//  INIT
+// ============================================================
+renderShelf();
+</script>
+</body>
+</html>

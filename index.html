@@ -996,6 +996,7 @@ document.getElementById('reader-main').addEventListener('touchstart', e => {
   touchX0 = e.touches[0].clientX;
 }, { passive: true });
 document.getElementById('reader-main').addEventListener('touchend', e => {
+  if (S.scrollMode) return;
   const dx = e.changedTouches[0].clientX - touchX0;
   if (Math.abs(dx) > 60) {
     if (dx < 0 && S.page < S.total) renderPage(S.page+1,'next');

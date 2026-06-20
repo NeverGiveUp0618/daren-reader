@@ -555,6 +555,35 @@ body {
 }
 #toast.show { opacity: 1; }
 
+/* ===== TEXT VIEW (reading mode) ===== */
+#text-view {
+  display: none;
+  flex: 1;
+  overflow-y: auto;
+  background: #FBF6EC;
+  color: #1a0e02;
+  padding: 20px 18px 40px;
+  font-size: 1.08rem;
+  line-height: 2;
+  word-break: break-all;
+  font-family: 'Noto Serif SC', 'SimSun', 'STSong', serif;
+}
+.tv-page { margin-bottom: 12px; }
+.tv-pg-label {
+  color: #bbb;
+  font-size: 0.7rem;
+  text-align: center;
+  border-top: 1px dashed #ddd;
+  margin: 20px 0 14px;
+  padding-top: 8px;
+  letter-spacing: 0.2em;
+}
+.tv-content { white-space: pre-wrap; }
+.tv-empty { color: #aaa; text-align: center; padding: 40px 0; font-size: 0.9rem; }
+@media (max-width: 640px) {
+  #text-view { font-size: 1rem; padding: 14px 13px 30px; line-height: 1.9; }
+}
+
 /* ===== TEXT LAYER ===== */
 .textLayer {
   position: absolute;
@@ -709,6 +738,7 @@ body {
     <button class="toolbar-btn" id="btn-note-mode" title="点击页面添加笔记">📌 添加笔记</button>
     <button class="toolbar-btn" id="btn-panel" title="笔记面板">📋 笔记</button>
     <div class="toolbar-divider"></div>
+    <button class="toolbar-btn" id="btn-text-mode" title="文字阅读模式（适合手机）">文 阅读</button>
     <button class="toolbar-btn" id="btn-export" title="导出笔记为文本">💾 导出</button>
   </div>
 
@@ -724,6 +754,9 @@ body {
       <!-- Scroll mode -->
       <div id="scroll-wrap"></div>
     </div>
+
+    <!-- Text view (reading mode) -->
+    <div id="text-view"></div>
 
     <!-- Notes panel -->
     <div id="notes-panel">
@@ -849,6 +882,7 @@ let S = {
   scrollMode: false,
   noteMode: false,
   panelOpen: false,
+  textMode: false,
   pending: null,
   editId: null,
   color: '#FFD700',
@@ -1345,14 +1379,86 @@ document.getElementById('btn-export').addEventListener('click', () => {
 });
 
 // ============================================================
+//  TEXT MODE (reading mode)
+// ============================================================
+function extractPageText(tc) {
+  const LINE_GAP = 6;
+  const lines = [];
+  (tc.items || []).forEach(item => {
+    if (!item.str) return;
+    const y = item.transform[5];
+    let line = lines.find(l => Math.abs(l.y - y) <= LINE_GAP);
+    if (!line) { line = { y, parts: [] }; lines.push(line); }
+    line.parts.push({ x: item.transform[4], str: item.str });
+  });
+  lines.sort((a, b) => b.y - a.y);
+  return lines.map(l => {
+    l.parts.sort((a, b) => a.x - b.x);
+    return l.parts.map(p => p.str).join('');
+  }).filter(Boolean).join('\n');
+}
+
+async function enterTextMode() {
+  S.textMode = true;
+  document.getElementById('btn-text-mode').classList.add('active');
+  document.getElementById('page-container').style.display = 'none';
+  document.getElementById('scroll-wrap').style.display    = 'none';
+  document.getElementById('reader-footer').style.display  = 'none';
+  document.getElementById('text-view').style.display      = 'block';
+
+  const tv = document.getElementById('text-view');
+  tv.innerHTML = '<div class="tv-empty">正在提取文字，请稍候…</div>';
+  showLoad(true);
+
+  let html = '';
+  let hasText = false;
+  for (let i = 1; i <= S.total; i++) {
+    const page = await S.pdf.getPage(i);
+    const tc   = await page.getTextContent();
+    const txt  = extractPageText(tc);
+    if (txt.trim()) hasText = true;
+    html += `<div class="tv-page">
+      <div class="tv-pg-label">第 ${i} 页</div>
+      <div class="tv-content">${esc(txt) || '<span style="color:#ccc">（本页无文字）</span>'}</div>
+    </div>`;
+  }
+
+  showLoad(false);
+  if (!hasText) {
+    tv.innerHTML = '<div class="tv-empty">此书为扫描图片，无法提取文字<br>请使用 PDF 模式阅读</div>';
+  } else {
+    tv.innerHTML = html;
+    tv.scrollTo(0, 0);
+  }
+}
+
+function exitTextMode() {
+  S.textMode = false;
+  document.getElementById('btn-text-mode').classList.remove('active');
+  document.getElementById('text-view').style.display = 'none';
+  if (!S.scrollMode) {
+    document.getElementById('page-container').style.display = 'flex';
+    document.getElementById('reader-footer').style.display  = 'flex';
+  } else {
+    document.getElementById('scroll-wrap').style.display = 'flex';
+  }
+}
+
+document.getElementById('btn-text-mode').addEventListener('click', () => {
+  if (S.textMode) exitTextMode();
+  else            enterTextMode();
+});
+
+// ============================================================
 //  TOOLBAR EVENTS
 // ============================================================
 document.getElementById('btn-back').addEventListener('click', goShelf);
 
 function goShelf() {
+  if (S.textMode) exitTextMode();
   document.getElementById('view-reader').style.display = 'none';
   document.getElementById('view-shelf').style.display  = 'block';
-  S.book = null; S.pdf = null;
+  S.book = null; S.pdf = null; S.textMode = false;
   renderShelf();
 }
 

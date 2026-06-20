@@ -221,7 +221,7 @@ body {
    MOBILE
    ============================================================ */
 @media (max-width: 640px) {
-  #scroll-wrap { padding: 8px; }
+  #scroll-wrap { padding: 3px; }
   .shelf-header { padding: 28px 16px 44px; }
   .shelf-header h1 { font-size: 1.28rem; letter-spacing: .12em; }
   #btn-skin-shelf { top: auto; bottom: 14px; transform: none; right: 14px; padding: 6px 12px; font-size: .76rem; }
@@ -578,7 +578,7 @@ async function openBook(book) {
     if (window.innerWidth <= 640) {
       const firstPage = await S.pdf.getPage(1);
       const vp1 = firstPage.getViewport({ scale: 1 });
-      const availW = document.getElementById('reader-main').clientWidth - 16; // 8px padding each side
+      const availW = document.getElementById('reader-main').clientWidth - 6; // 3px padding each side
       S.scale = Math.min(2.0, availW / vp1.width);
     }
     document.getElementById('zoom-pct').textContent = Math.round(S.scale*100) + '%';

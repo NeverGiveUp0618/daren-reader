@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>任付红·民间实用八字 阅读室</title>
+<title>八字阅览室</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
 /* ============================================================
@@ -117,9 +117,7 @@ body {
 .np-header h3 { font-size: .88rem; color: var(--t0); }
 .np-header label { font-size: .74rem; color: var(--t2); display: flex; align-items: center; gap: 5px; cursor: pointer; }
 .np-header input[type=checkbox] { cursor: pointer; accent-color: var(--ac); }
-.np-add { margin: 10px 12px 4px; padding: 9px 10px; background: var(--ac-bg); border: 1px dashed var(--ac2); border-radius: 7px; color: var(--ac); font-size: .8rem; text-align: center; cursor: pointer; transition: opacity .12s; flex-shrink: 0; }
-.np-add:hover { opacity: .8; }
-.np-add.active { border-style: solid; }
+.np-hint { margin: 8px 12px 4px; padding: 7px 10px; background: var(--ac-bg); border: 1px dashed var(--ac2); border-radius: 7px; color: var(--ac); font-size: .76rem; text-align: center; flex-shrink: 0; opacity: .75; }
 #notes-list { flex: 1; overflow-y: auto; padding: 6px 10px 10px; }
 .note-item { background: var(--p2); border-left: 3px solid var(--ac); border-radius: 6px; padding: 9px 30px 9px 10px; margin-bottom: 7px; cursor: pointer; position: relative; transition: background .12s; }
 .note-item:hover { background: var(--p3); }
@@ -132,25 +130,13 @@ body {
 .np-empty { color: var(--t2); text-align: center; padding: 30px 0; font-size: .82rem; }
 
 /* ============================================================
-   NOTE POPUP
+   NOTE COMMENT (inline edit in panel)
    ============================================================ */
-#note-popup { position: fixed; width: 264px; background: var(--p1); border: 1px solid var(--bd2); border-radius: 12px; padding: 12px; box-shadow: 0 8px 32px var(--shadow); z-index: 500; display: none; }
-#note-ctx { display: none; background: var(--ac-bg); border-left: 3px solid var(--ac); border-radius: 0 5px 5px 0; padding: 5px 8px; margin-bottom: 8px; font-size: .74rem; color: var(--ac); line-height: 1.5; max-height: 58px; overflow-y: auto; word-break: break-all; }
-#note-ta { width: 100%; height: 88px; background: var(--p0); border: 1px solid var(--bd); border-radius: 6px; color: var(--t0); padding: 8px; font-size: .83rem; resize: none; font-family: inherit; line-height: 1.55; }
-#note-ta:focus { outline: none; border-color: var(--ac2); }
-.color-row { display: flex; gap: 7px; margin: 8px 0 10px; }
-.cdot { width: 19px; height: 19px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: transform .12s; }
-.cdot:hover { transform: scale(1.2); }
-.cdot.sel   { border-color: #fff; transform: scale(1.15); }
-.popup-row { display: flex; gap: 8px; }
-.popup-row button { flex: 1; padding: 8px; border-radius: 7px; border: 1px solid var(--bd2); font-size: .83rem; font-family: inherit; cursor: pointer; transition: background .12s; }
-#btn-save-note   { background: var(--ac-bg); color: var(--ac); border-color: var(--ac2); }
-#btn-save-note:hover { opacity: .85; }
-#btn-cancel-note { background: var(--p2); color: var(--t1); }
-#btn-cancel-note:hover { background: var(--p3); }
-.pin { position: absolute; width: 22px; height: 22px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg) translate(-50%,-50%); cursor: pointer; pointer-events: all; transition: transform .15s; filter: drop-shadow(0 1px 3px rgba(0,0,0,.5)); }
-.pin:hover { transform: rotate(-45deg) translate(-50%,-50%) scale(1.25); }
-.pin-n { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; transform: rotate(45deg); font-size: 10px; font-weight: bold; color: rgba(0,0,0,.65); }
+.note-comment-ta { width:100%; min-height:52px; background:var(--p0); border:1px solid var(--bd); border-radius:5px; color:var(--t0); padding:6px 8px; font-size:.8rem; resize:vertical; font-family:inherit; line-height:1.55; margin-top:6px; }
+.note-comment-ta:focus { outline:none; border-color:var(--ac2); }
+.note-actions { display:flex; align-items:center; justify-content:space-between; margin-top:5px; }
+.note-save-btn { background:var(--ac-bg); border:1px solid var(--ac2); color:var(--ac); border-radius:5px; padding:3px 12px; font-size:.76rem; cursor:pointer; font-family:inherit; }
+.note-save-btn:hover { opacity:.8; }
 
 /* ============================================================
    TEXT VIEW
@@ -231,7 +217,7 @@ body {
 <!-- ======================== BOOKSHELF ======================== -->
 <div id="view-shelf">
   <div class="shelf-header">
-    <h1><em>任付红</em>·民间实用八字</h1>
+    <h1><em>八字</em>阅览室</h1>
     <p>共 22 册 · 点击书籍开始阅读</p>
     <button id="btn-skin-shelf">🎨 换皮肤</button>
   </div>
@@ -253,8 +239,7 @@ body {
     </div>
     <div class="toolbar-divider"></div>
     <button class="toolbar-btn" id="btn-mode"  title="切换翻页/滚动">📖 翻页</button>
-    <button class="toolbar-btn" id="btn-note-mode" title="点击页面添加笔记">📌 添加笔记</button>
-    <button class="toolbar-btn" id="btn-panel" title="笔记面板">📋 笔记</button>
+    <button class="toolbar-btn" id="btn-panel" title="查看笔记">📋 笔记</button>
     <div class="toolbar-divider"></div>
     <button class="toolbar-btn" id="btn-text-mode" title="流式阅读模式：文字自适应屏幕，适合手机">流式阅读</button>
     <button class="toolbar-btn" id="btn-export" title="导出笔记为文本">💾 导出</button>
@@ -287,7 +272,7 @@ body {
           <button id="btn-close-panel" style="display:none;background:#2a2a2a;border:1px solid #444;color:#aaa;border-radius:4px;padding:2px 8px;cursor:pointer;font-size:0.8rem">✕ 关闭</button>
         </div>
       </div>
-      <div class="np-add" id="np-add-btn">+ 点击页面插入笔记</div>
+      <div class="np-hint">选中文字后点击"添加到笔记"即可收录</div>
       <div id="notes-list"></div>
     </div>
   </div>
@@ -303,24 +288,7 @@ body {
   </div>
 </div>
 
-<!-- ======================== NOTE POPUP ======================== -->
-<div id="note-popup">
-  <div id="note-ctx"></div>
-  <textarea id="note-ta" placeholder="输入笔记内容..."></textarea>
-  <div class="color-row">
-    <div class="cdot sel" data-color="#FFD700" style="background:#FFD700" title="金"></div>
-    <div class="cdot"     data-color="#FF6B6B" style="background:#FF6B6B" title="红"></div>
-    <div class="cdot"     data-color="#51CF66" style="background:#51CF66" title="绿"></div>
-    <div class="cdot"     data-color="#74C0FC" style="background:#74C0FC" title="蓝"></div>
-    <div class="cdot"     data-color="#E599F7" style="background:#E599F7" title="紫"></div>
-  </div>
-  <div class="popup-row">
-    <button id="btn-save-note">保存</button>
-    <button id="btn-cancel-note">取消</button>
-  </div>
-</div>
-
-<div id="sel-btn"><button id="sel-note-btn">📝 写笔记</button></div>
+<div id="sel-btn"><button id="sel-note-btn">📌 添加到笔记</button></div>
 
 <!-- ======================== SKIN PANEL ======================== -->
 <div id="skin-panel">
@@ -419,13 +387,8 @@ let S = {
   total: 0,
   scale: 1.4,
   scrollMode: false,
-  noteMode: false,
   panelOpen: false,
   textMode: false,
-  pending: null,
-  editId: null,
-  color: '#FFD700',
-  currentQuote: null,
 };
 
 // ============================================================
@@ -447,15 +410,19 @@ function getProgress(id) {
 function saveProgress(id, pg) {
   localStorage.setItem(pKey(id), pg);
 }
-function addNote(id, pg, x, y, text, color, quote) {
+function addNote(id, pg, quote) {
   const d = getNotes(id);
   if (!d[pg]) d[pg] = [];
-  const note = { id: Date.now(), x, y, text, color,
-                 quote: quote || null,
+  const note = { id: Date.now(), quote, comment: '',
                  at: new Date().toLocaleString('zh-CN') };
   d[pg].push(note);
   saveNotes(id, d);
   return note;
+}
+function updateNoteComment(bookId, pg, noteId, comment) {
+  const d = getNotes(bookId);
+  (d[pg] || []).forEach(n => { if (n.id === noteId) n.comment = comment; });
+  saveNotes(bookId, d);
 }
 function deleteNote(bookId, pg, noteId) {
   const d = getNotes(bookId);
@@ -547,9 +514,6 @@ async function openBook(book) {
 
   document.getElementById('book-title-bar').textContent =
     `${book.sub} · ${book.title}`;
-  document.getElementById('btn-note-mode').classList.remove('active');
-  document.getElementById('annot-overlay').classList.remove('note-mode');
-  document.getElementById('np-add-btn').classList.remove('active');
 
   showLoad(true);
   try {
@@ -638,7 +602,6 @@ async function renderPage(pg, dir) {
   document.getElementById('btn-next').disabled = pg >= S.total;
 
   saveProgress(S.book.id, pg);
-  renderPins();
   refreshPanel();
   document.getElementById('reader-main').scrollTo(0, 0);
 }
@@ -670,105 +633,15 @@ async function renderScroll() {
   showLoad(false);
 }
 
-// ============================================================
-//  ANNOTATION PINS
-// ============================================================
-function renderPins() {
-  const overlay = document.getElementById('annot-overlay');
-  overlay.innerHTML = '';
-  if (!S.book) return;
-  const notes = getNotes(S.book.id);
-  const pg = notes[S.page] || [];
-  pg.forEach((n, i) => {
-    if (n.x == null) return; // text-selection note: no pin
-    const pin = document.createElement('div');
-    pin.className = 'pin';
-    pin.style.cssText =
-      `left:${n.x*100}%;top:${n.y*100}%;background:${n.color||'#FFD700'};`;
-    pin.title = n.text;
-    pin.innerHTML = `<div class="pin-n">${i+1}</div>`;
-    pin.addEventListener('click', e => {
-      e.stopPropagation();
-      openPopupEdit(n, e.clientX, e.clientY);
-    });
-    overlay.appendChild(pin);
-  });
-}
 
 // ============================================================
-//  NOTE POPUP
-// ============================================================
-function openPopupNew(x, y, px, py) {
-  S.pending = { x, y };
-  S.editId  = null;
-  document.getElementById('note-ta').value = '';
-  placePopup(px, py);
-}
-
-function openPopupEdit(note, px, py) {
-  S.pending = { x: note.x, y: note.y };
-  S.editId  = note.id;
-  document.getElementById('note-ta').value = note.text;
-  setColor(note.color || '#FFD700');
-  placePopup(px, py);
-}
-
-function placePopup(px, py) {
-  const p = document.getElementById('note-popup');
-  p.style.left = Math.min(px, window.innerWidth  - 274) + 'px';
-  p.style.top  = Math.min(py + 10, window.innerHeight - 180) + 'px';
-  p.style.display = 'block';
-  document.getElementById('note-ta').focus();
-}
-
-function closePopup() {
-  document.getElementById('note-popup').style.display = 'none';
-  document.getElementById('note-ctx').style.display = 'none';
-  S.pending = null;
-  S.editId  = null;
-  S.currentQuote = null;
-}
-
-function setColor(c) {
-  S.color = c;
-  document.querySelectorAll('.cdot').forEach(d =>
-    d.classList.toggle('sel', d.dataset.color === c));
-}
-
-document.getElementById('btn-save-note').addEventListener('click', () => {
-  const text = document.getElementById('note-ta').value.trim();
-  if (!text || !S.book) return;
-
-  if (S.editId !== null) {
-    const d = getNotes(S.book.id);
-    (d[S.page] || []).forEach(n => {
-      if (n.id === S.editId) { n.text = text; n.color = S.color; }
-    });
-    saveNotes(S.book.id, d);
-  } else {
-    const px = S.pending ? S.pending.x : null;
-    const py = S.pending ? S.pending.y : null;
-    addNote(S.book.id, S.page, px, py, text, S.color, S.currentQuote);
-  }
-  closePopup();
-  renderPins();
-  refreshPanel();
-  toast('笔记已保存');
-});
-
-document.getElementById('btn-cancel-note').addEventListener('click', closePopup);
-
-document.querySelectorAll('.cdot').forEach(d =>
-  d.addEventListener('click', () => setColor(d.dataset.color)));
-
-// ============================================================
-//  TEXT SELECTION → NOTE
+//  TEXT SELECTION → ADD TO NOTES
 // ============================================================
 let _selText = '', _selRect = null;
 
 function checkSel() {
   if (document.getElementById('view-reader').style.display === 'none') return;
-  if (S.noteMode || S.scrollMode) return;
+  if (S.scrollMode) return;
   const sel = window.getSelection();
   const txt = sel ? sel.toString().trim() : '';
   if (txt.length > 1 && sel.rangeCount > 0) {
@@ -776,7 +649,7 @@ function checkSel() {
     const rect = sel.getRangeAt(0).getBoundingClientRect();
     _selRect = rect;
     const btn = document.getElementById('sel-btn');
-    btn.style.left = Math.max(8, Math.min(rect.left, window.innerWidth - 130)) + 'px';
+    btn.style.left = Math.max(8, Math.min(rect.left, window.innerWidth - 150)) + 'px';
     btn.style.top  = Math.min(rect.bottom + 8, window.innerHeight - 52) + 'px';
     btn.style.display = 'block';
   } else {
@@ -795,44 +668,14 @@ document.addEventListener('touchend', () => setTimeout(checkSel, 80));
 
 document.getElementById('sel-note-btn').addEventListener('click', () => {
   if (!_selText || !S.book) { hideSelBtn(); return; }
-  S.currentQuote = _selText;
-  S.pending = { x: null, y: null };
-  S.editId  = null;
-
-  const ctx = document.getElementById('note-ctx');
-  ctx.textContent = '「' + _selText + '」';
-  ctx.style.display = 'block';
-  document.getElementById('note-ta').value = '';
-
-  const px = _selRect ? _selRect.left : window.innerWidth / 2 - 130;
-  const py = _selRect ? _selRect.bottom + 10 : window.innerHeight / 2;
-  placePopup(px, py);
-  document.getElementById('note-ta').focus();
+  addNote(S.book.id, S.page, _selText);
+  toast('已添加到笔记 📌');
   hideSelBtn();
   window.getSelection().removeAllRanges();
+  if (S.panelOpen) refreshPanel();
 });
 
-// Hide sel-btn on scroll or ESC
 document.getElementById('reader-main').addEventListener('scroll', hideSelBtn, { passive: true });
-
-// Overlay click to place pin
-document.getElementById('annot-overlay').addEventListener('click', e => {
-  if (!S.noteMode) return;
-  const rect = document.getElementById('annot-overlay').getBoundingClientRect();
-  const x = (e.clientX - rect.left)  / rect.width;
-  const y = (e.clientY - rect.top)   / rect.height;
-  openPopupNew(x, y, e.clientX, e.clientY);
-});
-
-// Close popup on outside click
-document.addEventListener('click', e => {
-  const p = document.getElementById('note-popup');
-  if (p.style.display !== 'none' &&
-      !p.contains(e.target) &&
-      !e.target.classList.contains('pin')) {
-    closePopup();
-  }
-});
 
 // ============================================================
 //  NOTES PANEL
@@ -853,30 +696,43 @@ function refreshPanel() {
   if (filter) all = all.filter(n => n.pg === S.page);
 
   if (!all.length) {
-    list.innerHTML = '<div class="np-empty">暂无笔记</div>';
+    list.innerHTML = '<div class="np-empty">暂无笔记<br><span style="font-size:.74rem;opacity:.6">选中文字后点击「添加到笔记」</span></div>';
     return;
   }
 
   all.forEach(n => {
+    const quote   = n.quote || n.text || '';
+    const comment = n.comment != null ? n.comment : (n.text && n.quote ? n.text : '');
     const el = document.createElement('div');
     el.className = 'note-item';
-    el.style.borderLeftColor = n.color || '#FFD700';
+    el.style.borderLeftColor = n.color || 'var(--ac)';
     el.innerHTML = `
-      <div class="note-pg">第 ${n.pg} 页${n.x != null ? ' 📌' : ' 📝'}</div>
-      ${n.quote ? `<div class="note-quote">「${esc(n.quote)}」</div>` : ''}
-      <div class="note-text">${esc(n.text)}</div>
-      <div class="note-time">${n.at}</div>
-      <div class="note-del" data-id="${n.id}" data-pg="${n.pg}">✕</div>`;
+      <div class="note-pg">第 ${n.pg} 页 <span style="float:right;cursor:pointer;color:var(--t2);font-size:.72rem" data-del>✕ 删除</span></div>
+      ${quote ? `<div class="note-quote">「${esc(quote)}」</div>` : ''}
+      <textarea class="note-comment-ta" placeholder="写下你的想法…" rows="2">${esc(comment)}</textarea>
+      <div class="note-actions">
+        <button class="note-save-btn" data-save>保存想法</button>
+        <span class="note-time">${n.at}</span>
+      </div>`;
 
-    el.querySelector('.note-del').addEventListener('click', e => {
+    el.querySelector('[data-del]').addEventListener('click', e => {
       e.stopPropagation();
-      deleteNote(S.book.id, n.pg, n.id);
-      renderPins();
-      refreshPanel();
+      if (confirm('删除这条笔记？')) {
+        deleteNote(S.book.id, n.pg, n.id);
+        refreshPanel();
+      }
+    });
+
+    el.querySelector('[data-save]').addEventListener('click', e => {
+      e.stopPropagation();
+      const ta = el.querySelector('.note-comment-ta');
+      updateNoteComment(S.book.id, n.pg, n.id, ta.value);
+      toast('想法已保存');
     });
 
     el.addEventListener('click', e => {
-      if (e.target.classList.contains('note-del')) return;
+      if (e.target.dataset.del != null || e.target.dataset.save != null) return;
+      if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'BUTTON') return;
       if (!S.scrollMode && n.pg !== S.page) renderPage(n.pg, 'next');
     });
 
@@ -1023,12 +879,7 @@ document.getElementById('btn-mode').addEventListener('click', async () => {
   pc.style.display = S.scrollMode ? 'none' : 'flex';
   sw.style.display = S.scrollMode ? 'flex' : 'none';
   ft.style.display = S.scrollMode ? 'none' : 'flex';
-  ao.style.pointerEvents = S.scrollMode ? 'none' : '';
-  if (S.scrollMode && S.noteMode) {
-    S.noteMode = false;
-    document.getElementById('btn-note-mode').classList.remove('active');
-    document.getElementById('np-add-btn').classList.remove('active');
-  }
+  ao.style.pointerEvents = 'none';
   document.getElementById('btn-mode').textContent = S.scrollMode ? '📄 翻页' : '📖 翻页';
 
   showLoad(true);
@@ -1036,18 +887,6 @@ document.getElementById('btn-mode').addEventListener('click', async () => {
   else await renderPage(S.page);
   showLoad(false);
 });
-
-// Note mode
-function toggleNoteMode(on) {
-  S.noteMode = (on === undefined) ? !S.noteMode : on;
-  const el = document.getElementById('annot-overlay');
-  el.classList.toggle('note-mode', S.noteMode && !S.scrollMode);
-  document.getElementById('btn-note-mode').classList.toggle('active', S.noteMode);
-  document.getElementById('np-add-btn').classList.toggle('active', S.noteMode);
-  if (S.noteMode) toast('已进入笔记模式，点击页面插入笔记');
-}
-document.getElementById('btn-note-mode').addEventListener('click', () => toggleNoteMode());
-document.getElementById('np-add-btn').addEventListener('click', () => toggleNoteMode());
 
 // Panel toggle
 function setPanelOpen(open) {
@@ -1081,7 +920,7 @@ document.addEventListener('keydown', e => {
   if (document.getElementById('view-reader').style.display === 'none') return;
   if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')    { e.preventDefault(); if (S.page>1)      renderPage(S.page-1,'prev'); }
   if (e.key === 'ArrowRight' || e.key === 'ArrowDown')  { e.preventDefault(); if (S.page<S.total) renderPage(S.page+1,'next'); }
-  if (e.key === 'Escape')   { closePopup(); hideSelBtn(); }
+  if (e.key === 'Escape')   { hideSelBtn(); }
   if (e.key === '+' || e.key === '=') zoom(+0.1);
   if (e.key === '-')                  zoom(-0.1);
 });

@@ -801,19 +801,44 @@ function extractPageText(tc) {
   return lines.map(l => {
     l.parts.sort((a, b) => a.x - b.x);
     if (!l.parts.length) return '';
-    let result = '';
-    let curX = minX;
-    l.parts.forEach(p => {
-      const gap = p.x - curX;
-      if (gap > unitW * 0.4) {
-        // 用全角空格（　）填充间距，与汉字等宽，确保同柱对齐
-        const n = Math.max(1, Math.round(gap / unitW));
-        result += '　'.repeat(n);
+
+    // 判断是否为稀疏列布局（八字天干/地支行等）
+    // 标准：超过 50% 的相邻项间距 > 0.7 字符宽，则为列布局
+    let largeGapCount = 0;
+    for (let i = 1; i < l.parts.length; i++) {
+      const prev = l.parts[i - 1];
+      const curr = l.parts[i];
+      const gap = curr.x - (prev.x + Math.max(prev.w, prev.str.length * unitW));
+      if (gap > unitW * 0.7) largeGapCount++;
+    }
+    const isColumnLayout = l.parts.length >= 2 &&
+      largeGapCount / (l.parts.length - 1) > 0.5;
+
+    if (isColumnLayout) {
+      // 列模式：从全局左边距出发，按 X 坐标插入全角空格，保证同柱对齐
+      let result = '';
+      let curX = minX;
+      l.parts.forEach(p => {
+        const gap = p.x - curX;
+        if (gap > unitW * 0.35) {
+          result += '　'.repeat(Math.max(1, Math.round(gap / unitW)));
+        }
+        result += p.str;
+        curX = p.x + Math.max(p.w, p.str.length * unitW);
+      });
+      return result;
+    } else {
+      // 流文本模式：直接拼接，不插入多余空格，避免正文排版混乱
+      let result = l.parts[0].str;
+      for (let i = 1; i < l.parts.length; i++) {
+        const prev = l.parts[i - 1];
+        const curr = l.parts[i];
+        const gap = curr.x - (prev.x + Math.max(prev.w, prev.str.length * unitW));
+        if (gap > unitW * 0.9) result += ' ';
+        result += curr.str;
       }
-      result += p.str;
-      curX = p.x + Math.max(p.w, p.str.length * unitW);
-    });
-    return result;
+      return result;
+    }
   }).filter(l => l.trim()).join('\n');
 }
 

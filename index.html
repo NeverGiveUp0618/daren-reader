@@ -94,7 +94,8 @@ body {
 #pdf-canvas { display: block; background: white; }
 #annot-overlay { position: absolute; inset: 0; pointer-events: none; }
 #annot-overlay.note-mode { pointer-events: all; cursor: crosshair; }
-#scroll-wrap { display: none; flex-direction: column; align-items: center; gap: 8px; padding: 20px; width: 100%; }
+#scroll-wrap { display: none; flex-direction: column; align-items: center; gap: 0; padding: 20px; width: 100%; }
+.scroll-page-wrap { position: relative; display: block; line-height: 0; margin-bottom: 0; }
 .scroll-canvas { display: block; background: white; box-shadow: 0 2px 14px var(--shadow); }
 .scroll-page-label { color: var(--t2); font-size: .7rem; padding: 2px 0 10px; text-align: center; width: 100%; }
 @keyframes slideIn     { from { opacity:0; transform:translateX(20px);  } to { opacity:1; transform:none; } }
@@ -619,14 +620,41 @@ async function renderPage(pg, dir) {
 //  RENDER SCROLL MODE
 // ============================================================
 async function renderScroll() {
+  if (S._scrollObserver) { S._scrollObserver.disconnect(); S._scrollObserver = null; }
   const wrap = document.getElementById('scroll-wrap');
   wrap.innerHTML = '';
   if (!S.pdf) return;
   showLoad(true);
+
+  // Lazy-load text layer when page scrolls into view
+  const observer = new IntersectionObserver(async entries => {
+    for (const entry of entries) {
+      if (!entry.isIntersecting || entry.target._tlDone) continue;
+      entry.target._tlDone = true;
+      const pg = +entry.target.dataset.pg;
+      try {
+        const page = await S.pdf.getPage(pg);
+        const viewport = page.getViewport({ scale: S.scale });
+        const tc  = await page.getTextContent();
+        const tld = document.createElement('div');
+        tld.className = 'textLayer';
+        entry.target.appendChild(tld);
+        const task = pdfjsLib.renderTextLayer({ textContent: tc, container: tld, viewport, textDivs: [] });
+        if (task && task.promise) await task.promise;
+      } catch(e) {}
+    }
+  }, { rootMargin: '400px' });
+  S._scrollObserver = observer;
+
   for (let i = 1; i <= S.total; i++) {
     const page     = await S.pdf.getPage(i);
     const viewport = page.getViewport({ scale: S.scale });
-    const canvas   = document.createElement('canvas');
+
+    const pgWrap = document.createElement('div');
+    pgWrap.className = 'scroll-page-wrap';
+    pgWrap.dataset.pg = i;
+
+    const canvas = document.createElement('canvas');
     canvas.className = 'scroll-canvas';
     const dpr2 = window.devicePixelRatio || 1;
     canvas.style.width  = viewport.width  + 'px';
@@ -637,11 +665,14 @@ async function renderScroll() {
     sctx.scale(dpr2, dpr2);
     await page.render({ canvasContext: sctx, viewport }).promise;
 
+    pgWrap.appendChild(canvas);
+    observer.observe(pgWrap);
+
     const lbl = document.createElement('div');
     lbl.className = 'scroll-page-label';
     lbl.textContent = `第 ${i} 页`;
 
-    wrap.appendChild(canvas);
+    wrap.appendChild(pgWrap);
     wrap.appendChild(lbl);
   }
   showLoad(false);
@@ -651,15 +682,23 @@ async function renderScroll() {
 // ============================================================
 //  TEXT SELECTION → ADD TO NOTES
 // ============================================================
-let _selText = '', _selRect = null;
+let _selText = '', _selRect = null, _selPage = 1;
 
 function checkSel() {
   if (document.getElementById('view-reader').style.display === 'none') return;
-  if (S.scrollMode) return;
   const sel = window.getSelection();
   const txt = sel ? sel.toString().trim() : '';
   if (txt.length > 1 && sel.rangeCount > 0) {
     _selText = txt;
+    // Detect page number from DOM ancestor in scroll mode
+    if (S.scrollMode) {
+      let node = sel.getRangeAt(0).startContainer;
+      while (node && node.nodeType !== 1) node = node.parentNode;
+      while (node && !node.dataset?.pg) node = node.parentElement;
+      _selPage = node ? +node.dataset.pg : 1;
+    } else {
+      _selPage = S.page;
+    }
     const rect = sel.getRangeAt(0).getBoundingClientRect();
     _selRect = rect;
     const btn = document.getElementById('sel-btn');
@@ -682,7 +721,7 @@ document.addEventListener('touchend', () => setTimeout(checkSel, 80));
 
 document.getElementById('sel-note-btn').addEventListener('click', () => {
   if (!_selText || !S.book) { hideSelBtn(); return; }
-  addNote(S.book.id, S.page, _selText);
+  addNote(S.book.id, _selPage, _selText);
   toast('已添加到笔记 📌');
   hideSelBtn();
   window.getSelection().removeAllRanges();
@@ -747,7 +786,12 @@ function refreshPanel() {
     el.addEventListener('click', e => {
       if (e.target.dataset.del != null || e.target.dataset.save != null) return;
       if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'BUTTON') return;
-      if (!S.scrollMode && n.pg !== S.page) renderPage(n.pg, 'next');
+      if (S.scrollMode) {
+        const pgWrap = document.querySelector(`.scroll-page-wrap[data-pg="${n.pg}"]`);
+        if (pgWrap) pgWrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else if (n.pg !== S.page) {
+        renderPage(n.pg, 'next');
+      }
     });
 
     list.appendChild(el);

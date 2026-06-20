@@ -575,11 +575,12 @@ async function openBook(book) {
     refreshPanel();
   } catch(e) {
     showLoad(false);
+    const isFileProtocol = location.protocol === 'file:';
     alert(
       `⚠ 无法加载 PDF\n\n` +
-      `原因: ${e.message}\n\n` +
-      `请双击同目录下的「启动阅读器.bat」\n` +
-      `通过本地服务器（localhost）打开本页面。`
+      (isFileProtocol
+        ? `当前是直接打开文件，浏览器安全限制禁止加载 PDF。\n\n✅ 解决方法：\n双击同目录下的「启动阅读器.bat」\n用本地服务器打开（地址自动跳到 localhost:8765）`
+        : `原因：${e.message}`)
     );
     goShelf();
     return;

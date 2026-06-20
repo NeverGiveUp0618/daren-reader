@@ -531,7 +531,11 @@ async function openBook(book) {
     }
     document.getElementById('zoom-pct').textContent = Math.round(S.scale*100) + '%';
 
-    await enterTextMode();
+    if (S.scrollMode) {
+      await renderScroll();
+    } else {
+      await renderPage(S.page);
+    }
     refreshPanel();
   } catch(e) {
     showLoad(false);

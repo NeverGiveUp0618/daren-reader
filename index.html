@@ -87,7 +87,7 @@ body {
 #book-title-bar { flex: 1; text-align: center; font-size: .85rem; color: var(--t1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 6px; }
 .zoom-group { display: flex; align-items: center; gap: 4px; }
 #zoom-pct { font-size: .76rem; color: var(--t2); min-width: 38px; text-align: center; }
-.reader-body { flex: 1; display: flex; overflow: hidden; }
+.reader-body { flex: 1; display: flex; overflow: hidden; min-height: 0; }
 #reader-main { flex: 1; overflow: auto; background: var(--p0); display: flex; justify-content: center; align-items: flex-start; }
 #page-container { padding: 20px; display: flex; justify-content: center; min-width: 100%; }
 #canvas-wrap { position: relative; display: inline-block; box-shadow: 0 4px 40px var(--shadow); line-height: 0; }
@@ -141,7 +141,7 @@ body {
 /* ============================================================
    TEXT VIEW
    ============================================================ */
-#text-view { display: none; flex: 1; overflow-y: auto; background: var(--paper); color: #1a0e02; padding: 24px 20px 48px; font-size: 1.35rem; line-height: 2.1; word-break: break-all; font-family: 'Noto Serif SC','SimSun','STSong',serif; }
+#text-view { display: none; flex: 1; overflow-y: auto; min-height: 0; background: var(--paper); color: #1a0e02; padding: 24px 20px 48px; font-size: 1.35rem; line-height: 2.1; word-break: break-all; font-family: 'Noto Serif SC','SimSun','STSong',serif; }
 [data-theme="light"] #text-view { color: #1a1a2e; }
 .tv-page { margin-bottom: 12px; }
 .tv-pg-label { color: var(--t2); font-size: .7rem; text-align: center; border-top: 1px dashed var(--bd); margin: 18px 0 14px; padding-top: 6px; letter-spacing: .2em; }
@@ -238,7 +238,7 @@ body {
       <button class="toolbar-btn" id="btn-zoom-in"  title="放大 (+)">A+</button>
     </div>
     <div class="toolbar-divider"></div>
-    <button class="toolbar-btn" id="btn-mode"  title="切换翻页/滚动">📖 翻页</button>
+    <button class="toolbar-btn" id="btn-mode"  title="切换翻页/滚动">📖 翻页模式</button>
     <button class="toolbar-btn" id="btn-panel" title="查看笔记">📋 笔记</button>
     <div class="toolbar-divider"></div>
     <button class="toolbar-btn" id="btn-text-mode" title="流式阅读模式：文字自适应屏幕，适合手机">流式阅读</button>
@@ -386,7 +386,7 @@ let S = {
   page: 1,
   total: 0,
   scale: 1.4,
-  scrollMode: false,
+  scrollMode: true,
   panelOpen: false,
   textMode: false,
 };
@@ -897,7 +897,7 @@ document.getElementById('btn-mode').addEventListener('click', async () => {
   sw.style.display = S.scrollMode ? 'flex' : 'none';
   ft.style.display = S.scrollMode ? 'none' : 'flex';
   ao.style.pointerEvents = 'none';
-  document.getElementById('btn-mode').textContent = S.scrollMode ? '📄 翻页' : '📖 翻页';
+  document.getElementById('btn-mode').textContent = S.scrollMode ? '📖 翻页模式' : '📜 滚动模式';
 
   showLoad(true);
   if (S.scrollMode) await renderScroll();

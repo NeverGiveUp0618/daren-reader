@@ -241,7 +241,6 @@ body {
     <button class="toolbar-btn" id="btn-mode"  title="切换翻页/滚动">📖 翻页模式</button>
     <button class="toolbar-btn" id="btn-panel" title="查看笔记">📋 笔记</button>
     <div class="toolbar-divider"></div>
-    <button class="toolbar-btn" id="btn-text-mode" title="流式阅读模式：文字自适应屏幕，适合手机">流式阅读</button>
     <button class="toolbar-btn" id="btn-export" title="导出笔记为文本">💾 导出</button>
     <div class="toolbar-divider"></div>
     <button class="toolbar-btn" id="btn-skin" title="换皮肤">🎨</button>
@@ -532,7 +531,15 @@ async function openBook(book) {
     }
     document.getElementById('zoom-pct').textContent = Math.round(S.scale*100) + '%';
 
-    await enterTextMode();
+    // 默认 PDF 滚动模式
+    S.textMode  = false;
+    S.scrollMode = true;
+    document.getElementById('page-container').style.display = 'none';
+    document.getElementById('scroll-wrap').style.display    = 'flex';
+    document.getElementById('reader-footer').style.display  = 'none';
+    document.getElementById('reader-main').style.display    = 'flex';
+    document.getElementById('text-view').style.display      = 'none';
+    await renderScroll();
     refreshPanel();
   } catch(e) {
     showLoad(false);
@@ -803,7 +810,7 @@ function extractPageText(tc) {
 
 async function enterTextMode() {
   S.textMode = true;
-  document.getElementById('btn-text-mode').classList.add('active');
+  // btn-text-mode removed
   document.getElementById('reader-main').style.display    = 'none';
   document.getElementById('reader-footer').style.display  = 'none';
   document.getElementById('text-view').style.display      = 'block';
@@ -843,7 +850,7 @@ async function enterTextMode() {
 
 function exitTextMode() {
   S.textMode = false;
-  document.getElementById('btn-text-mode').classList.remove('active');
+  // btn-text-mode removed
   document.getElementById('text-view').style.display   = 'none';
   document.getElementById('reader-main').style.display = 'flex';
   if (!S.scrollMode) {
@@ -854,10 +861,7 @@ function exitTextMode() {
   }
 }
 
-document.getElementById('btn-text-mode').addEventListener('click', () => {
-  if (S.textMode) exitTextMode();
-  else            enterTextMode();
-});
+// btn-text-mode removed — PDF scroll is the default
 
 // ============================================================
 //  TOOLBAR EVENTS
@@ -865,9 +869,9 @@ document.getElementById('btn-text-mode').addEventListener('click', () => {
 document.getElementById('btn-back').addEventListener('click', goShelf);
 
 function goShelf() {
-  if (S.textMode) exitTextMode();
   document.getElementById('view-reader').style.display = 'none';
   document.getElementById('view-shelf').style.display  = 'block';
+  document.getElementById('scroll-wrap').innerHTML = '';
   S.book = null; S.pdf = null; S.textMode = false;
   renderShelf();
 }
